@@ -68,6 +68,15 @@ async function ensureTables() {
       created_at TIMESTAMPTZ DEFAULT now()
     );
   `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS qa_sheets (
+      id SERIAL PRIMARY KEY,
+      title TEXT NOT NULL,
+      subtitle TEXT,
+      sheet_data JSONB NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT now()
+    );
+  `);
   console.log("✓ tables ready");
 }
 
@@ -253,6 +262,111 @@ function pickPreferUnused(pool, n) {
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
+
+// ── 6) أداة دمج شيتات الأسئلة والإجابات (Q&A Sheet Builder) ─────────
+const qaUpload = upload.fields([
+  { name: "questions_file", maxCount: 1 },
+  { name: "answers_file", maxCount: 1 },
+  { name: "single_file", maxCount: 1 },
+]);
+
+app.post("/webhook/merge-qa-sheet", qaUpload, async (req, res) => {
+  try {
+    const qFile = req.files && req.files["questions_file"] ? req.files["questions_file"][0] : (req.files && req.files["single_file"] ? req.files["single_file"][0] : null);
+    const aFile = req.files && req.files["answers_file"] ? req.files["answers_file"][0] : null;
+
+    if (!qFile && !aFile) return res.status(400).json({ error: "no files provided" });
+
+    const prompt =
+      "You are an expert university tutorial and problem set converter.\n" +
+      "You are provided with one or two files (Questions PDF and/or Model Answers PDF which may be handwritten/CamScanner notes or printed).\n\n" +
+      "GOAL:\n" +
+      "Produce a unified, print-ready, professional problem-by-problem Q&A worksheet matching the provided files.\n\n" +
+      "RULES:\n" +
+      "1. Identify the Course/Subject Name, Course Code (e.g. PHM112), Term/Year, and Tutorial/Sheet Title from the headers/footers.\n" +
+      "2. For each Problem/Question: match it with its exact complete worked solution from the answers file.\n" +
+      "3. If any question has no answer in the file, solve it accurately in full mathematical detail in the same pedagogical style.\n" +
+      "4. Format all math equations in standard LaTeX using \\( ... \\) for inline math and \\[ ... \\] for display block math.\n" +
+      "5. If a solution uses a geometric reference triangle (like in trig substitution), include a small SVG right-triangle diagram with labeled sides and angle \\theta.\n" +
+      "6. Wrap the final result/expression in \\boxed{...}.\n" +
+      "7. Return ONLY a valid JSON object strictly matching this schema with no markdown formatting:\n" +
+      "{\n" +
+      '  "course_title": "Tutorial 5 — Integration",\n' +
+      '  "course_sub": "Mathematics for Engineers and Scientists 2 (PHM112) · Fall 2025",\n' +
+      '  "problems": [\n' +
+      "    {\n" +
+      '      "problem_label": "Problem 1",\n' +
+      '      "question_html": "Find the integral: \\\\[ \\\\int \\\\frac{\\\\sqrt{16-x^2}}{x^2} dx \\\\]",\n' +
+      '      "answer_html": "Let \\\\( x = 4 \\\\sin \\\\theta, dx = 4 \\\\cos \\\\theta d\\\\theta \\\\)... \\\\[ \\\\boxed{ I = -\\\\frac{\\\\sqrt{16-x^2}}{x} - \\\\sin^{-1} \\\\frac{x}{4} + C } \\\\]"\n' +
+      "    }\n" +
+      "  ]\n" +
+      "}";
+
+    const parts = [{ text: prompt }];
+
+    if (qFile) {
+      parts.push({ text: "FILE 1 (Questions Sheet):" });
+      parts.push({
+        inline_data: {
+          mime_type: qFile.mimetype || "application/pdf",
+          data: qFile.buffer.toString("base64"),
+        },
+      });
+    }
+
+    if (aFile) {
+      parts.push({ text: "FILE 2 (Model Answers / Handwritten CamScanner Solutions):" });
+      parts.push({
+        inline_data: {
+          mime_type: aFile.mimetype || "application/pdf",
+          data: aFile.buffer.toString("base64"),
+        },
+      });
+    }
+
+    const geminiRes = await fetch(`${GEMINI_URL}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-goog-api-key": GEMINI_API_KEY },
+      body: JSON.stringify({ contents: [{ parts }] }),
+    });
+
+    if (!geminiRes.ok) throw new Error(`Gemini HTTP ${geminiRes.status}`);
+    const geminiData = await geminiRes.json();
+    const rawText = geminiData.candidates[0].content.parts[0].text;
+    const cleaned = rawText.replace(/```json|```/g, "").trim();
+    const start = cleaned.indexOf("{");
+    const end = cleaned.lastIndexOf("}");
+    const resultObj = JSON.parse(cleaned.substring(start, end + 1));
+
+    // Save to database
+    try {
+      await pool.query(
+        `INSERT INTO qa_sheets (title, subtitle, sheet_data) VALUES ($1, $2, $3)`,
+        [resultObj.course_title || "Tutorial Sheet", resultObj.course_sub || "", JSON.stringify(resultObj)]
+      );
+    } catch (dbErr) {
+      console.warn("Could not save QA sheet to DB:", dbErr);
+    }
+
+    res.json({ status: "ok", sheet: resultObj });
+  } catch (err) {
+    console.error("Merge Q&A Error:", err);
+    res.status(500).json({ error: String(err) });
+  }
+});
+
+// ── 7) سجل الشيتات السابقة (Q&A Sheets History) ────────────────────
+app.get("/webhook/qa-sheets", async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT id, title, subtitle, sheet_data, created_at FROM qa_sheets ORDER BY created_at DESC LIMIT 50`
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: String(err) });
+  }
+});
 
 const PORT = process.env.PORT || 10000;
 ensureTables()

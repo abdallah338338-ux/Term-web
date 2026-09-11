@@ -42,7 +42,7 @@ const pool = new Pool({
 });
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent`;
+const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent`;
 
 // ── جداول قاعدة البيانات (تتعمل أول مرة تلقائيًا) ───────────────────
 async function ensureTables() {

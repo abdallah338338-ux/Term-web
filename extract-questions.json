@@ -1,0 +1,176 @@
+{
+  "name": "extract-questions",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "extract-questions",
+        "responseMode": "responseNode",
+        "options": {
+          "binaryData": true
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "id": "webhook-extract",
+      "name": "Webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "const binaryData = items[0].binary.file;\nconst base64Data = binaryData.data;\nconst body = items[0].json.body || {};\n\nconst prompt = `You are an expert exam question creator for university level courses. Extract comprehensive open-ended exam questions and detailed step-by-step model answers from this lecture PDF.\nExtract all key concepts, definitions, mathematical equations, explanations, and diagrams.\nFor any equations or mathematical formulas, use standard LaTeX syntax enclosed in $...$ or $$...$$.\nFor diagrams or visual drawings, describe the diagram context clearly within the question.\n\nCRITICAL RULES:\n1. Questions must be open-ended (essay / explanation / calculation / derivation). DO NOT create multiple-choice (MCQ) or true/false questions.\n2. Return ONLY a valid, raw JSON array of objects with no markdown code blocks, backticks, or other text.\n\nJSON Schema:\n[\n  {\n    \"question\": \"Clear, high-quality open-ended question text...\",\n    \"answer\": \"Comprehensive model answer...\",\n    \"type\": \"text\"\n  }\n]`;\n\nreturn [{\n  json: {\n    subject_id: body.subject_id || '0',\n    subject_name: body.subject_name || '',\n    lecture_number: parseInt(body.lecture_number || '1', 10),\n    geminiPayload: {\n      contents: [{\n        parts: [\n          { text: prompt },\n          {\n            inline_data: {\n              mime_type: binaryData.mimeType || 'application/pdf',\n              data: base64Data\n            }\n          }\n        ]\n      }]\n    }\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 0],
+      "id": "prepare-request",
+      "name": "Prepare Request"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.geminiPayload) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [440, 0],
+      "id": "gemini-api",
+      "name": "Gemini API",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "gemini-api-key",
+          "name": "Gemini API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const prepData = $('Prepare Request').first().json;\nconst subject_id = prepData.subject_id;\nconst subject_name = prepData.subject_name;\nconst lecture_number = prepData.lecture_number;\n\nlet text = '';\ntry {\n  text = $json.candidates[0].content.parts[0].text;\n} catch (e) {\n  throw new Error('Gemini did not return text response: ' + JSON.stringify($json));\n}\n\n// Strip markdown code fences if present\ntext = text.replace(/```json/gi, '').replace(/```/g, '').trim();\n\nlet questions = [];\ntry {\n  questions = JSON.parse(text);\n} catch (e) {\n  throw new Error('Failed to parse Gemini JSON: ' + text);\n}\n\nif (!Array.isArray(questions)) {\n  questions = [questions];\n}\n\nreturn questions.map(q => ({\n  json: {\n    subject_id: String(subject_id),\n    subject_name: String(subject_name || ''),\n    lecture_number: parseInt(lecture_number || 1, 10),\n    question: q.question || '',\n    answer: q.answer || '',\n    type: q.type || 'text',\n    used: false\n  }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, 0],
+      "id": "parse-gemini",
+      "name": "Parse Gemini & Format Rows"
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "question_bank",
+          "mode": "list"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "subject_id": "={{ $json.subject_id }}",
+            "subject_name": "={{ $json.subject_name }}",
+            "lecture_number": "={{ $json.lecture_number }}",
+            "question": "={{ $json.question }}",
+            "answer": "={{ $json.answer }}",
+            "type": "={{ $json.type }}",
+            "used": "={{ $json.used }}"
+          },
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [880, 0],
+      "id": "insert-questions",
+      "name": "Insert into question_bank",
+      "credentials": {
+        "postgres": {
+          "id": "supabase-postgres",
+          "name": "Supabase Postgres"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"status\": \"ok\",\n  \"message\": \"Questions extracted and saved successfully\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1100, 0],
+      "id": "respond-webhook",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Prepare Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Request": {
+      "main": [
+        [
+          {
+            "node": "Gemini API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini API": {
+      "main": [
+        [
+          {
+            "node": "Parse Gemini & Format Rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Gemini & Format Rows": {
+      "main": [
+        [
+          {
+            "node": "Insert into question_bank",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert into question_bank": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

@@ -442,6 +442,38 @@ Don’t show
   </div>
 </div>
 
+<!-- Exam Selection Overlay (شامل vs مخصص) -->
+<div class="modal-overlay" id="exam-select-overlay">
+  <div class="modal-box" style="max-width:480px; padding:24px; border-radius:16px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+      <span style="font-family:'Cairo',sans-serif; font-weight:800; font-size:17px; color:var(--text-main);" id="select-modal-title">🎓 إنشاء امتحان جديد</span>
+      <button class="mh-btn close" id="exam-select-close" type="button" style="font-size:18px; cursor:pointer;">✕</button>
+    </div>
+    <p style="font-size:13.5px; color:var(--text-secondary); margin:0 0 16px;">اختر نوع الامتحان الذي تريد إنشاءه:</p>
+    
+    <div style="display:flex; flex-direction:column; gap:12px; margin-bottom:20px;">
+      <label style="display:flex; align-items:flex-start; gap:10px; padding:12px 14px; border:2px solid var(--accent); border-radius:12px; background:var(--accent-pale); cursor:pointer;" id="opt-all-label">
+        <input type="radio" name="exam-type" value="all" checked style="margin-top:4px;">
+        <div>
+          <div style="font-weight:700; font-size:14px; color:var(--text-main);">🌟 امتحان شامل (جميع المحاضرات)</div>
+          <div style="font-size:12px; color:var(--text-secondary); margin-top:2px;">يطبق قاعدة 50% (نصف الأسئلة من أحدث 3 محاضرات ونصف من باقي المحاضرات).</div>
+        </div>
+      </label>
+
+      <label style="display:flex; align-items:flex-start; gap:10px; padding:12px 14px; border:1px solid var(--border); border-radius:12px; background:#fff; cursor:pointer;" id="opt-custom-label">
+        <input type="radio" name="exam-type" value="custom" style="margin-top:4px;">
+        <div style="width:100%;">
+          <div style="font-weight:700; font-size:14px; color:var(--text-main);">🎯 امتحان مخصص لمحاضرات محددة</div>
+          <div style="font-size:12px; color:var(--text-secondary); margin-top:2px;">حدد المحاضرات التي تريد توليد الامتحان منها:</div>
+          <div id="lecture-checkboxes-container" style="display:none; margin-top:10px; flex-direction:column; gap:6px; max-height:160px; overflow-y:auto; padding:8px; background:var(--bg); border-radius:8px; border:1px solid var(--border);"></div>
+        </div>
+      </label>
+    </div>
+
+    <button type="button" id="start-exam-gen-btn" class="cta-btn" style="width:100%; text-align:center; padding:12px;">🚀 ابدأ إنشاء الامتحان</button>
+  </div>
+</div>
+
 <!-- Exam modal -->
 <div class="exam-overlay" id="exam-overlay">
   <div class="exam-modal">
@@ -457,12 +489,12 @@ Don’t show
       <div class="exam-loading" id="exam-loading">
         <div class="loader-ring"></div>
         <div class="loader-title">جارٍ إنشاء الامتحان...</div>
-        <div class="loader-sub">Antigravity بيقرأ بنك الأسئلة ويختار أفضل 10 أسئلة</div>
+        <div class="loader-sub">الذكاء الاصطناعي بيقرأ بنك الأسئلة ويختار أفضل 10 أسئلة</div>
         <div class="loader-steps">
           <div class="loader-step" id="lstep-1"><span class="step-icon">📚</span> تحميل بنك الأسئلة</div>
-          <div class="loader-step" id="lstep-2"><span class="step-icon">🎯</span> تطبيق قاعدة 50%</div>
-          <div class="loader-step" id="lstep-3"><span class="step-icon">🖊</span> توليد صفحة الأسئلة</div>
-          <div class="loader-step" id="lstep-4"><span class="step-icon">✅</span> توليد صفحة الإجابات</div>
+          <div class="loader-step" id="lstep-2"><span class="step-icon">🎯</span> فرز وتوزيع المسائل الرياضية</div>
+          <div class="loader-step" id="lstep-3"><span class="step-icon">🖊</span> تنسيق صفحة الأسئلة بدقة</div>
+          <div class="loader-step" id="lstep-4"><span class="step-icon">✅</span> إعداد نموذج الإجابة النموذجي</div>
         </div>
       </div>
     </div>
@@ -476,22 +508,92 @@ const STORAGE_KEY = "term-tracker-state-v2";
 const ICONS = ["💻","🏗","📚","🎨","🧠","📈","🌐","🔬","⚖️","🎵","📷","📁"];
 const COLORS = ["#FF8A3D","#3b82f6","#10b981","#ef4444","#8b5cf6"];
 
-/* ─── Exam System Config — n8n (self-hosted) ──────────────────────
-   بعد ما تخلّص نشر n8n على Render (راجع TermBoard-Master-Roadmap.md
-   قسم 2)، بدّل الروابط التحت دي كلها بروابط Render الحقيقية بالشكل:
-   https://termboard-xxxx.onrender.com/webhook/<اسم-الورشة>
------------------------------------------------------------------- */
-const N8N_EXTRACT_URL      = "https://term-web.onrender.com/webhook/extract-questions";
-const N8N_GENERATE_URL     = "https://term-web.onrender.com/webhook/generate-exam";
-const N8N_BANK_INFO_URL    = "https://term-web.onrender.com/webhook/bank-info";
-const N8N_EXAM_HISTORY_URL = "https://term-web.onrender.com/webhook/exam-history";
-const EXAM_FEATURES_ENABLED = true; // خليها false لو عايز توقف زرار الامتحان مؤقتًا
+/* ─── Backend Endpoints (Render) ─────────────────────────────────── */
+const N8N_EXTRACT_URL        = "https://term-web.onrender.com/webhook/extract-questions";
+const N8N_GENERATE_URL       = "https://term-web.onrender.com/webhook/generate-exam";
+const N8N_BANK_INFO_URL      = "https://term-web.onrender.com/webhook/bank-info";
+const N8N_EXAM_HISTORY_URL   = "https://term-web.onrender.com/webhook/exam-history";
+const N8N_DELETE_LECTURE_URL = "https://term-web.onrender.com/webhook/delete-lecture";
+const EXAM_FEATURES_ENABLED  = true;
 
 let state = null;
 let currentPath = []; // [] = root, [subjectId] = inside subject
-const sessionFiles = {}; // key `${subjectId}-${fileId}` -> {file, url}
-const bankCache = {};          // subject_id → {lecture_count, total_questions}
-const examHistoryCache = {};   // subject_id → [{id, created_at, questions_html, answers_html}, ...]
+const sessionFiles = {}; // key `${subjectId}-${fileId}` -> {file, url, name}
+const bankCache = {};
+const examHistoryCache = {};
+let currentExamSubject = null;
+
+/* ─── IndexedDB Persistent PDF Storage ───────────────────────────── */
+const DB_NAME = "TermBoardFilesDB";
+const DB_STORE = "pdf_files";
+let idb = null;
+
+function openFilesDB() {
+  return new Promise((resolve) => {
+    if (idb) return resolve(idb);
+    const req = indexedDB.open(DB_NAME, 1);
+    req.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(DB_STORE)) {
+        db.createObjectStore(DB_STORE, { keyPath: "id" });
+      }
+    };
+    req.onsuccess = (e) => { idb = e.target.result; resolve(idb); };
+    req.onerror = () => resolve(null);
+  });
+}
+
+async function savePdfToDB(id, fileBlob, name) {
+  const db = await openFilesDB();
+  if (!db) return;
+  return new Promise((resolve) => {
+    const tx = db.transaction(DB_STORE, "readwrite");
+    tx.objectStore(DB_STORE).put({ id, fileBlob, name });
+    tx.oncomplete = () => resolve(true);
+    tx.onerror = () => resolve(false);
+  });
+}
+
+async function deletePdfFromDB(id) {
+  const db = await openFilesDB();
+  if (!db) return;
+  return new Promise((resolve) => {
+    const tx = db.transaction(DB_STORE, "readwrite");
+    tx.objectStore(DB_STORE).delete(id);
+    tx.oncomplete = () => resolve(true);
+    tx.onerror = () => resolve(false);
+  });
+}
+
+async function getPdfFromDB(id) {
+  const db = await openFilesDB();
+  if (!db) return null;
+  return new Promise((resolve) => {
+    const tx = db.transaction(DB_STORE, "readonly");
+    const req = tx.objectStore(DB_STORE).get(id);
+    req.onsuccess = () => resolve(req.result ? req.result.fileBlob : null);
+    req.onerror = () => resolve(null);
+  });
+}
+
+async function restoreSessionFilesFromDB() {
+  if (!state || !state.subjects) return;
+  for (const sub of state.subjects) {
+    if (sub.files && sub.files.length) {
+      for (const f of sub.files) {
+        const key = `${sub.id}-${f.id}`;
+        try {
+          const blob = await getPdfFromDB(key);
+          if (blob) {
+            sessionFiles[key] = { file: blob, url: URL.createObjectURL(blob), name: f.name };
+          }
+        } catch (err) {
+          console.warn("Could not restore file:", key, err);
+        }
+      }
+    }
+  }
+}
 
 function defaultState(){
   return {
@@ -500,29 +602,37 @@ function defaultState(){
       name: "",
       icon: ICONS[i % ICONS.length],
       color: COLORS[i % COLORS.length],
-      files: [] // {id, name}
+      files: []
     }))
   };
 }
 
 async function loadState(){
   try{
-    const res = await window.storage.get(STORAGE_KEY, false);
-    state = res && res.value ? JSON.parse(res.value) : defaultState();
+    let val = localStorage.getItem(STORAGE_KEY);
+    if(!val && window.storage){
+      const res = await window.storage.get(STORAGE_KEY, false);
+      val = res && res.value ? res.value : null;
+    }
+    state = val ? JSON.parse(val) : defaultState();
   }catch(e){ state = defaultState(); }
   state.subjects.forEach((s, i) => { if(!s.color) s.color = COLORS[i % COLORS.length]; });
+  await restoreSessionFilesFromDB();
   render();
 }
+
 async function saveState(){
-  try{ await window.storage.set(STORAGE_KEY, JSON.stringify(state), false); }
-  catch(e){ console.error("تعذّر الحفظ", e); }
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    if(window.storage) await window.storage.set(STORAGE_KEY, JSON.stringify(state), false);
+  }catch(e){ console.error("تعذّر الحفظ", e); }
 }
 
 function subjectLabel(i){
   const names = ["الأولى","الثانية","الثالثة","الرابعة"];
   return `مادة ${names[i] || i+1}`;
 }
-function escapeHtml(s){ return s.replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function escapeHtml(s){ return String(s || "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
 function escapeAttr(s){ return escapeHtml(s || ""); }
 function uid(){ return Math.random().toString(36).slice(2,10); }
 
@@ -546,7 +656,6 @@ function renderBreadcrumb(){
 
 function renderRoot(){
   const wrap = document.getElementById("view-root");
-
   const grid = document.createElement("div");
   grid.className = "grid-view subjects-grid";
 
@@ -631,7 +740,7 @@ function renderSubject(subjectId){
     statsBar.className = "bank-stats";
     statsBar.id = `bank-stats-${subject.id}`;
     statsBar.innerHTML = buildBankStatsHTML(bankCache[subject.id]);
-    wrap.appendChild(statsBar); // لازم تتضاف للـDOM قبل ما نجيب البيانات
+    wrap.appendChild(statsBar);
     fetchBankInfo(subject.id);
   }
 
@@ -641,12 +750,13 @@ function renderSubject(subjectId){
   if(EXAM_FEATURES_ENABLED){
     const examRow = document.createElement("div");
     examRow.style.cssText = "display:flex;justify-content:center;gap:10px;margin-top:28px;flex-wrap:wrap;";
+    
     const examBtn = document.createElement("button");
     examBtn.type = "button";
     examBtn.className = "exam-btn";
     examBtn.id = `exam-btn-${subject.id}`;
     examBtn.innerHTML = "🎓 إنشاء امتحان جديد";
-    examBtn.addEventListener("click", () => generateExam(subject));
+    examBtn.addEventListener("click", () => openExamSelectModal(subject));
     examRow.appendChild(examBtn);
 
     const historyBtn = document.createElement("button");
@@ -666,7 +776,7 @@ function renderSubject(subjectId){
   }
 }
 
-/* ---------------- Bank stats (question_bank counts per subject) ---------------- */
+/* ---------------- Bank stats ---------------- */
 function buildBankStatsHTML(cached){
   if(!cached){
     return `<div class="bank-stat"><span class="dot warn"></span><span>جارٍ تحميل إحصائيات البنك...</span></div>`;
@@ -694,13 +804,12 @@ async function fetchBankInfo(subjectId){
     const bar = document.getElementById(`bank-stats-${subjectId}`);
     if(bar) bar.innerHTML = buildBankStatsHTML(data);
   }catch(e){
-    // مفيش اتصال بالسيرفر لسه أو الـendpoint مش موجود — نخفي الشريط بهدوء
     const bar = document.getElementById(`bank-stats-${subjectId}`);
     if(bar) bar.style.display = "none";
   }
 }
 
-/* ---------------- Exam history (past generated exams per subject) ---------------- */
+/* ---------------- Exam history ---------------- */
 async function toggleExamHistory(subject){
   const list = document.getElementById(`exam-history-${subject.id}`);
   if(!list) return;
@@ -729,7 +838,7 @@ async function toggleExamHistory(subject){
       });
     });
   }catch(e){
-    list.innerHTML = `<div class="exam-history-error">⚠️ مقدرش أجيب الامتحانات السابقة — تأكد إن سيرفر n8n شغّال.</div>`;
+    list.innerHTML = `<div class="exam-history-error">⚠️ تعذّر جلب الامتحانات السابقة من السيرفر.</div>`;
   }
 }
 
@@ -761,26 +870,43 @@ function openHistoricalExam(subject, entry){
   displayExamInModal(
     { html_content: htmlContent, exam_number: entry.id || "—", questions_count: 10 },
     subjectName,
-    true // isReopen
+    true
   );
 }
 
 function buildFilledBox(subject, fileObj, idx){
   const box = document.createElement("div");
   box.className = "file-box filled";
+  const lectureIndex = idx + 1;
   box.innerHTML = `
-    <span class="lec-tag">${idx+1}</span>
+    <span class="lec-tag">${lectureIndex}</span>
     <button type="button" class="remove-x" title="حذف">×</button>
     <div class="pdf-icon">PDF</div>
     <div class="fname" title="${escapeAttr(fileObj.name)}">${escapeHtml(fileObj.name)}</div>
   `;
-  box.querySelector(".remove-x").addEventListener("click", (e) => {
+  box.querySelector(".remove-x").addEventListener("click", async (e) => {
     e.stopPropagation();
     const key = `${subject.id}-${fileObj.id}`;
-    if(sessionFiles[key]){ URL.revokeObjectURL(sessionFiles[key].url); delete sessionFiles[key]; }
+    if(sessionFiles[key]){
+      URL.revokeObjectURL(sessionFiles[key].url);
+      delete sessionFiles[key];
+    }
+    await deletePdfFromDB(key);
+
+    // Delete questions from backend database for this lecture
+    try {
+      fetch(N8N_DELETE_LECTURE_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ subject_id: subject.id, lecture_number: lectureIndex })
+      }).catch(err => console.warn(err));
+    } catch(e){}
+
     subject.files = subject.files.filter(f => f.id !== fileObj.id);
     saveState();
+    delete bankCache[subject.id];
     render();
+    showToast(`🗑️ تم حذف المحاضرة ${lectureIndex} وتحديث بنك الأسئلة`, "success");
   });
   box.addEventListener("click", () => openPreview(subject, fileObj));
   return box;
@@ -794,16 +920,22 @@ function buildEmptyBox(subject){
   const fileInput = document.createElement("input");
   fileInput.type = "file";
   fileInput.accept = "application/pdf";
-  fileInput.addEventListener("change", () => {
+  fileInput.addEventListener("change", async () => {
     if(fileInput.files && fileInput.files[0] && subject.files.length < MAX_FILES){
       const file = fileInput.files[0];
       const id = uid();
       const lectureIndex = subject.files.length + 1;
+      const key = `${subject.id}-${id}`;
+      
       subject.files.push({ id, name: file.name, uploadedAt: new Date().toISOString() });
-      sessionFiles[`${subject.id}-${id}`] = { file, url: URL.createObjectURL(file) };
+      sessionFiles[key] = { file, url: URL.createObjectURL(file), name: file.name };
+      
+      // Save permanently in browser IndexedDB
+      await savePdfToDB(key, file, file.name);
       saveState();
       render();
-      // Auto-extract questions via n8n
+
+      // Auto-extract questions via Backend
       if(EXAM_FEATURES_ENABLED){
         extractPdfQuestions(subject, file, id, lectureIndex);
       }
@@ -839,20 +971,96 @@ async function extractPdfQuestions(subject, file, fileId, lectureIndex){
     delete bankCache[subject.id];
     if(document.getElementById(`bank-stats-${subject.id}`)) fetchBankInfo(subject.id);
   }catch(e){
-    showToast("⚠️ تعذّر الوصول لسيرفر n8n — تأكد إن نفق Cloudflare والـn8n شغّالين", "error");
+    showToast("⚠️ تعذّر استخراج الأسئلة من السيرفر — تأكد من عمل السيرفر", "error");
   }
 }
 
-async function generateExam(subject){
+/* ─── Exam Selection Modal (شامل vs مخصص) ───────────────────────── */
+function openExamSelectModal(subject){
+  currentExamSubject = subject;
+  if(subject.files.length === 0){
+    showToast("⚠️ يرجى رفع ملفات محاضرات أولاً قبل إنشاء الامتحان", "error");
+    return;
+  }
+
+  const overlay = document.getElementById("exam-select-overlay");
+  const title = document.getElementById("select-modal-title");
+  title.textContent = `🎓 إنشاء امتحان — ${subject.name || subjectLabel(subject.id)}`;
+
+  const radioAll = document.querySelector('input[name="exam-type"][value="all"]');
+  const radioCustom = document.querySelector('input[name="exam-type"][value="custom"]');
+  radioAll.checked = true;
+
+  const chkContainer = document.getElementById("lecture-checkboxes-container");
+  chkContainer.style.display = "none";
+  chkContainer.innerHTML = "";
+
+  subject.files.forEach((f, idx) => {
+    const lecNum = idx + 1;
+    const item = document.createElement("label");
+    item.style.cssText = "display:flex; align-items:center; gap:8px; font-size:13px; color:var(--text-main); cursor:pointer;";
+    item.innerHTML = `
+      <input type="checkbox" name="selected_lec" value="${lecNum}" checked>
+      <span><strong>محاضرة ${lecNum}:</strong> ${escapeHtml(f.name)}</span>
+    `;
+    chkContainer.appendChild(item);
+  });
+
+  const optAllLabel = document.getElementById("opt-all-label");
+  const optCustomLabel = document.getElementById("opt-custom-label");
+
+  function updateRadioUI(){
+    if(radioAll.checked){
+      optAllLabel.style.borderColor = "var(--accent)";
+      optAllLabel.style.background = "var(--accent-pale)";
+      optCustomLabel.style.borderColor = "var(--border)";
+      optCustomLabel.style.background = "#fff";
+      chkContainer.style.display = "none";
+    } else {
+      optCustomLabel.style.borderColor = "var(--accent)";
+      optCustomLabel.style.background = "var(--accent-pale)";
+      optAllLabel.style.borderColor = "var(--border)";
+      optAllLabel.style.background = "#fff";
+      chkContainer.style.display = "flex";
+    }
+  }
+
+  radioAll.onchange = updateRadioUI;
+  radioCustom.onchange = updateRadioUI;
+  updateRadioUI();
+
+  overlay.classList.add("open");
+}
+
+document.getElementById("exam-select-close").addEventListener("click", () => {
+  document.getElementById("exam-select-overlay").classList.remove("open");
+});
+
+document.getElementById("start-exam-gen-btn").addEventListener("click", () => {
+  document.getElementById("exam-select-overlay").classList.remove("open");
+  if(!currentExamSubject) return;
+
+  const isAll = document.querySelector('input[name="exam-type"][value="all"]').checked;
+  let selectedLecs = null;
+  if(!isAll){
+    const checkedBoxes = Array.from(document.querySelectorAll('input[name="selected_lec"]:checked'));
+    if(checkedBoxes.length === 0){
+      showToast("⚠️ يرجى تحديد محاضرة واحدة على الأقل", "error");
+      return;
+    }
+    selectedLecs = checkedBoxes.map(b => Number(b.value));
+  }
+
+  generateExam(currentExamSubject, selectedLecs);
+});
+
+async function generateExam(subject, selectedLectures=null){
   const btn = document.getElementById(`exam-btn-${subject.id}`);
   if(btn) btn.disabled = true;
 
-  // Open exam modal with loading state
   openExamModal(subject);
-
   const subjectName = subject.name || subjectLabel(subject.id);
 
-  // Animate loading steps
   const steps = ["lstep-1","lstep-2","lstep-3","lstep-4"];
   let stepIdx = 0;
   const stepTimer = setInterval(() => {
@@ -866,18 +1074,23 @@ async function generateExam(subject){
     }
     stepIdx++;
     if(stepIdx > steps.length) clearInterval(stepTimer);
-  }, 18000 / steps.length); // spread over expected duration
+  }, 18000 / steps.length);
 
   try{
+    const reqBody = {
+      subject_id: subject.id,
+      subject_name: subjectName,
+      lecture_count: subject.files.length,
+      question_count: 10,
+    };
+    if(selectedLectures && selectedLectures.length > 0){
+      reqBody.selected_lectures = selectedLectures;
+    }
+
     const res = await fetch(N8N_GENERATE_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        subject_id: subject.id,
-        subject_name: subjectName,
-        lecture_count: subject.files.length,
-        question_count: 10,
-      }),
+      body: JSON.stringify(reqBody),
     });
     clearInterval(stepTimer);
     if(!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -885,7 +1098,7 @@ async function generateExam(subject){
 
     if(data.questions_html){
       delete examHistoryCache[subject.id];
-      delete bankCache[subject.id]; // used flags تغيّرت
+      delete bankCache[subject.id];
       const htmlContent = buildExamDocument(subjectName, data.questions_html, data.answers_html);
       displayExamInModal(
         { html_content: htmlContent, exam_number: Date.now(), questions_count: 10 },
@@ -893,74 +1106,159 @@ async function generateExam(subject){
       );
     } else {
       closeExamModal();
-      showToast("❌ فشل إنشاء الامتحان — الرد من n8n مش بالشكل المتوقع", "error");
+      showToast("❌ فشل إنشاء الامتحان — الرد غير مكتمل", "error");
     }
   }catch(e){
     clearInterval(stepTimer);
     closeExamModal();
-    showToast("⚠️ تعذّر الوصول لسيرفر n8n — تأكد إن نفق Cloudflare والـn8n شغّالين", "error");
+    showToast("⚠️ تعذّر إنشاء الامتحان — تأكد من عمل السيرفر", "error");
   } finally {
     if(btn) btn.disabled = false;
   }
 }
 
-/* يبني مستند HTML كامل بصفحتين A4 (أسئلة / إجابات) من رد n8n */
+/* ─── Build Exam HTML Document with KaTeX & 2-Page Layout ─────────── */
 function buildExamDocument(subjectName, questionsHtml, answersHtml){
   const title = escapeHtml(subjectName);
   return `<!DOCTYPE html>
-<html lang="ar" dir="rtl"><head><meta charset="UTF-8">
+<html lang="ar">
+<head>
+<meta charset="UTF-8">
 <title>امتحان ${title}</title>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800;900&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+<!-- KaTeX for math formula rendering -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"><\/script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"><\/script>
 <style>
-  @page{ size:A4; margin:16mm; }
-  *{ box-sizing:border-box; }
-  body{ font-family:"IBM Plex Sans Arabic",sans-serif; margin:0; background:#f2f4f7; color:#101828; }
-  .toolbar{
-    position:sticky; top:0; background:#fff; border-bottom:1px solid #e3e8f0; padding:12px 20px;
-    display:flex; justify-content:center; gap:10px; z-index:5;
+  @page { size: A4; margin: 12mm 15mm; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'IBM Plex Sans Arabic', 'Poppins', -apple-system, sans-serif;
+    margin: 0; background: #eef2f6; color: #1e293b; line-height: 1.6;
   }
-  .toolbar button{
-    background:#3E7BFA; color:#fff; border:none; border-radius:9px; padding:9px 18px;
-    font-family:inherit; font-weight:600; font-size:13px; cursor:pointer;
+  .toolbar {
+    position: sticky; top: 0; background: #ffffff; border-bottom: 1px solid #e2e8f0;
+    padding: 12px 24px; display: flex; justify-content: center; gap: 14px; z-index: 50;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
   }
-  .toolbar button.secondary{ background:#fff; color:#101828; border:1px solid #e3e8f0; }
-  .page{
-    width:210mm; min-height:297mm; margin:22px auto; background:#fff;
-    padding:18mm 16mm; box-shadow:0 4px 18px rgba(16,24,40,0.12);
+  .toolbar button {
+    background: #3E7BFA; color: #fff; border: none; border-radius: 10px;
+    padding: 10px 22px; font-family: inherit; font-weight: 700; font-size: 14px;
+    cursor: pointer; transition: 0.15s; display: inline-flex; align-items: center; gap: 6px;
   }
-  .page h1{ font-size:19px; margin:0 0 4px; }
-  .page .meta{ font-size:12px; color:#65708A; margin-bottom:22px; }
-  #answers-page{ display:none; }
-  @media print{
-    .toolbar{ display:none; }
-    .page{ box-shadow:none; margin:0; width:auto; min-height:auto; page-break-after:always; }
+  .toolbar button:hover { background: #2557D6; transform: translateY(-1px); }
+  .toolbar button.secondary { background: #f1f5f9; color: #0f172a; border: 1px solid #cbd5e1; }
+  .toolbar button.secondary:hover { background: #e2e8f0; }
+
+  .page {
+    width: 210mm; min-height: 297mm; margin: 24px auto; background: #ffffff;
+    padding: 16mm 18mm; box-shadow: 0 10px 25px rgba(0,0,0,0.08); border-radius: 4px;
+    position: relative;
   }
-</style></head>
+  .page-header {
+    border-bottom: 2px solid #3E7BFA; padding-bottom: 12px; margin-bottom: 20px;
+    display: flex; justify-content: space-between; align-items: flex-end;
+  }
+  .page-header h1 {
+    font-family: 'Cairo', sans-serif; font-size: 22px; font-weight: 800;
+    margin: 0 0 6px; color: #0f172a;
+  }
+  .page-header .meta-tag {
+    font-size: 13px; color: #64748b; font-weight: 600;
+  }
+  .student-name-box {
+    font-size: 13px; font-weight: 600; color: #334155;
+    border: 1px dashed #cbd5e1; border-radius: 8px; padding: 6px 14px; background: #f8fafc;
+  }
+
+  /* Question & Answer items formatting */
+  .exam-content { direction: ltr; text-align: left; }
+  .exam-content ol { padding-left: 24px; margin: 0; }
+  .exam-content li {
+    margin-bottom: 20px; font-size: 14.5px; line-height: 1.7; color: #1e293b;
+    padding-bottom: 12px; border-bottom: 1px solid #f1f5f9;
+  }
+  .exam-content li:last-child { border-bottom: none; }
+  .exam-content p { margin: 6px 0; }
+  
+  .katex { font-size: 1.08em; }
+  .katex-display { margin: 10px 0 !important; }
+
+  #answers-page { display: none; }
+
+  @media print {
+    body { background: #fff; }
+    .toolbar { display: none !important; }
+    .page {
+      box-shadow: none !important; margin: 0 !important; width: 100% !important;
+      min-height: auto !important; padding: 10mm 12mm !important; page-break-after: always;
+    }
+    #answers-page { display: block !important; }
+  }
+</style>
+</head>
 <body>
   <div class="toolbar">
-    <button id="toggle-answers-btn" type="button">إظهار الإجابات</button>
-    <button class="secondary" type="button" onclick="window.print()">🖨 طباعة</button>
+    <button id="toggle-answers-btn" type="button">👁️ إظهار نموذج الإجابات</button>
+    <button class="secondary" type="button" onclick="window.print()">🖨️ طباعة (صفحتين A4)</button>
   </div>
+
   <div class="page" id="questions-page">
-    <h1>امتحان ${title}</h1>
-    <p class="meta">10 أسئلة — اسم الطالب: ______________</p>
-    ${questionsHtml || "<p>محتوى الأسئلة فاضي.</p>"}
+    <div class="page-header">
+      <div>
+        <h1>امتحان: ${title}</h1>
+        <div class="meta-tag">10 أسئلة مقالية — ورقة الأسئلة</div>
+      </div>
+      <div class="student-name-box">اسم الطالب: ___________________</div>
+    </div>
+    <div class="exam-content">
+      ${questionsHtml || "<p>لا توجد أسئلة.</p>"}
+    </div>
   </div>
+
   <div class="page" id="answers-page">
-    <h1>إجابات امتحان ${title}</h1>
-    ${answersHtml || "<p>محتوى الإجابات فاضي.</p>"}
+    <div class="page-header" style="border-bottom-color: #10b981;">
+      <div>
+        <h1 style="color: #065f46;">نموذج الإجابة: ${title}</h1>
+        <div class="meta-tag">الحلول التفصيلية والخطوات الرياضية النموذجية</div>
+      </div>
+      <div class="student-name-box" style="background:#f0fdf4; border-color:#bbf7d0;">Model Answers Sheet</div>
+    </div>
+    <div class="exam-content">
+      ${answersHtml || "<p>لا توجد إجابات.</p>"}
+    </div>
   </div>
+
   <script>
+    function renderMath() {
+      if (window.renderMathInElement) {
+        renderMathInElement(document.body, {
+          delimiters: [
+            {left: "$$", right: "$$", display: true},
+            {left: "$", right: "$", display: false},
+            {left: "\\\\[", right: "\\\\]", display: true},
+            {left: "\\\\(", right: "\\\\)", display: false}
+          ],
+          throwOnError: false
+        });
+      }
+    }
+    document.addEventListener("DOMContentLoaded", renderMath);
+    window.addEventListener("load", renderMath);
+    setTimeout(renderMath, 400);
+
     const btn = document.getElementById("toggle-answers-btn");
     const ansPage = document.getElementById("answers-page");
     let shown = false;
     btn.addEventListener("click", () => {
       shown = !shown;
       ansPage.style.display = shown ? "block" : "none";
-      btn.textContent = shown ? "إخفاء الإجابات" : "إظهار الإجابات";
+      btn.textContent = shown ? "🙈 إخفاء نموذج الإجابات" : "👁️ إظهار نموذج الإجابات";
     });
   <\/script>
-</body></html>`;
+</body>
+</html>`;
 }
 
 function openExamModal(subject){
@@ -974,7 +1272,6 @@ function openExamModal(subject){
   openTab.style.display = "none";
   printBtn.style.display = "none";
 
-  // Reset steps
   ["lstep-1","lstep-2","lstep-3","lstep-4"].forEach(id => {
     const el = document.getElementById(id);
     if(el){ el.classList.remove("active","done"); }
@@ -995,7 +1292,6 @@ function displayExamInModal(data, subjectName, isReopen){
 
   title.textContent = `🎓 امتحان ${subjectName} — رقم #${data.exam_number} (${data.questions_count} سؤال)`;
 
-  // Create blob URL for the HTML content
   const blob = new Blob([data.html_content], { type:"text/html;charset=utf-8" });
   const blobUrl = URL.createObjectURL(blob);
 
@@ -1099,7 +1395,7 @@ function closeColorPickerOnOutside(e){
 }
 
 /* ---------------- Preview modal ---------------- */
-function openPreview(subject, fileObj){
+async function openPreview(subject, fileObj){
   const overlay = document.getElementById("modal-overlay");
   const body = document.getElementById("modal-body");
   const title = document.getElementById("modal-title");
@@ -1107,9 +1403,17 @@ function openPreview(subject, fileObj){
 
   title.textContent = fileObj.name;
   const key = `${subject.id}-${fileObj.id}`;
-  const sess = sessionFiles[key];
+  let sess = sessionFiles[key];
 
-  if(sess){
+  if(!sess || !sess.url){
+    const blob = await getPdfFromDB(key);
+    if(blob){
+      sess = { file: blob, url: URL.createObjectURL(blob), name: fileObj.name };
+      sessionFiles[key] = sess;
+    }
+  }
+
+  if(sess && sess.url){
     body.innerHTML = `<iframe src="${sess.url}#toolbar=1&scrollbar=1" title="${escapeAttr(fileObj.name)}"></iframe>`;
     openTab.href = sess.url;
     openTab.style.display = "inline-flex";
@@ -1117,7 +1421,7 @@ function openPreview(subject, fileObj){
     body.innerHTML = `
       <div class="modal-empty">
         <span class="big">📄</span>
-        <p>معاينة "${escapeHtml(fileObj.name)}" مش متاحة دلوقتي لأنه اتضاف في جلسة سابقة والمتصفح مابيحتفظش بمحتوى الملف بشكل دائم. أعد اختيار نفس الملف من جهازك عشان تتاح المعاينة من جديد.</p>
+        <p>معاينة "${escapeHtml(fileObj.name)}" غير متاحة.</p>
       </div>`;
     openTab.style.display = "none";
   }

@@ -81,13 +81,16 @@ app.post("/webhook/extract-questions", upload.single("file"), async (req, res) =
     const mimeType = req.file.mimetype || "application/pdf";
 
     const prompt =
-      "Extract all questions, formulas, and solutions from this file. " +
-      "IMPORTANT INSTRUCTIONS:\n" +
-      "1. Format all math expressions using proper LaTeX (e.g. \\int, \\frac, \\sqrt).\n" +
-      "2. Describe any diagrams/figures precisely in text.\n" +
-      "3. Include full solution steps, not just the final answer.\n" +
-      "4. Return ONLY a valid JSON array, no explanation: " +
-      '[{"question":"...","answer":"...","type":"text|diagram|formula"}]';
+      "You are an expert university exam problem extractor and solver for engineering and science curricula.\n" +
+      "Analyze this PDF carefully (which may contain lecture tutorial sheets, questions with solutions, or questions followed by model answers).\n\n" +
+      "TASKS:\n" +
+      "1. Extract ALL distinct questions/problems along with their full, step-by-step model answers.\n" +
+      "2. If answers are provided in the document (either right below each question or in an answer section at the end/separate pages), extract the exact corresponding solution.\n" +
+      "3. If any question lacks a solution in the PDF, write a rigorous, complete, step-by-step mathematical/engineering solution for it.\n" +
+      "4. Format all mathematical expressions, variables, units, and equations using standard LaTeX enclosed in single dollar signs for inline ($x = 4\\sin\\theta$) or double dollar signs for block ($$\\int ... dx$$).\n" +
+      "5. Describe any essential geometry, triangles, or diagram setups clearly in text.\n" +
+      "6. Return ONLY a valid JSON array of objects with NO surrounding markdown or commentary:\n" +
+      '[{"question": "Problem statement in English/Arabic with $LaTeX$", "answer": "Detailed step-by-step solution with $LaTeX$", "type": "text"}]';
 
     const geminiRes = await fetch(`${GEMINI_URL}`, {
       method: "POST",
@@ -104,6 +107,12 @@ app.post("/webhook/extract-questions", upload.single("file"), async (req, res) =
     const end = cleaned.lastIndexOf("]");
     const questions = JSON.parse(cleaned.substring(start, end + 1));
 
+    // First delete any previous questions for this lecture to prevent duplicates
+    await pool.query(
+      `DELETE FROM question_bank WHERE subject_id = $1 AND lecture_number = $2`,
+      [subject_id, Number(lecture_number)]
+    );
+
     for (const q of questions) {
       await pool.query(
         `INSERT INTO question_bank (subject_id, lecture_number, question, answer, type)
@@ -119,29 +128,38 @@ app.post("/webhook/extract-questions", upload.single("file"), async (req, res) =
   }
 });
 
-// ── 2) توليد امتحان ─────────────────────────────────────────────────
+// ── 2) توليد امتحان (شامل أو لمحاضرات محددة) ─────────────────────────
 app.post("/webhook/generate-exam", async (req, res) => {
   try {
-    const { subject_id, subject_name, question_count } = req.body;
+    const { subject_id, subject_name, question_count, selected_lectures } = req.body;
     const qCount = Number(question_count) || 10;
 
-    const { rows } = await pool.query(
-      `SELECT * FROM question_bank WHERE subject_id = $1 ORDER BY lecture_number ASC`,
-      [String(subject_id)]
-    );
-    if (rows.length === 0) return res.status(400).json({ error: "question bank فاضي لسه" });
+    let query = `SELECT * FROM question_bank WHERE subject_id = $1`;
+    let params = [String(subject_id)];
 
-    const lectureCount = Math.max(...rows.map((r) => r.lecture_number));
+    if (Array.isArray(selected_lectures) && selected_lectures.length > 0) {
+      query += ` AND lecture_number = ANY($2::int[])`;
+      params.push(selected_lectures.map(Number));
+    }
+    query += ` ORDER BY lecture_number ASC`;
+
+    const { rows } = await pool.query(query, params);
+    if (rows.length === 0) return res.status(400).json({ error: "question bank فاضي لسه للمحاضرات المحددة" });
+
     let selected = [];
-
-    if (lectureCount > 3) {
-      const recentLectures = [lectureCount - 2, lectureCount - 1, lectureCount];
-      const recentPool = shuffle(rows.filter((r) => recentLectures.includes(r.lecture_number)));
-      const olderPool = shuffle(rows.filter((r) => !recentLectures.includes(r.lecture_number)));
-      selected = [
-        ...pickPreferUnused(recentPool, Math.ceil(qCount / 2)),
-        ...pickPreferUnused(olderPool, Math.floor(qCount / 2)),
-      ];
+    if (!selected_lectures || selected_lectures.length === 0) {
+      const lectureCount = Math.max(...rows.map((r) => r.lecture_number));
+      if (lectureCount > 3) {
+        const recentLectures = [lectureCount - 2, lectureCount - 1, lectureCount];
+        const recentPool = shuffle(rows.filter((r) => recentLectures.includes(r.lecture_number)));
+        const olderPool = shuffle(rows.filter((r) => !recentLectures.includes(r.lecture_number)));
+        selected = [
+          ...pickPreferUnused(recentPool, Math.ceil(qCount / 2)),
+          ...pickPreferUnused(olderPool, Math.floor(qCount / 2)),
+        ];
+      } else {
+        selected = pickPreferUnused(shuffle(rows), qCount);
+      }
     } else {
       selected = pickPreferUnused(shuffle(rows), qCount);
     }
@@ -166,6 +184,21 @@ app.post("/webhook/generate-exam", async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ status: "error", message: String(err) });
+  }
+});
+
+// ── 5) حذف أسئلة محاضرة معينة عند حذف الملف من الموقع ─────────────
+app.post("/webhook/delete-lecture", async (req, res) => {
+  try {
+    const { subject_id, lecture_number } = req.body;
+    await pool.query(
+      `DELETE FROM question_bank WHERE subject_id = $1 AND lecture_number = $2`,
+      [String(subject_id), Number(lecture_number)]
+    );
+    res.json({ status: "ok" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: String(err) });
   }
 });
 

@@ -1,0 +1,154 @@
+{
+  "name": "generate-exam",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "generate-exam",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "id": "webhook-generate",
+      "name": "Webhook"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, subject_id, subject_name, lecture_number, question, answer, type, used FROM question_bank WHERE subject_id = '{{ $json.body.subject_id }}' ORDER BY lecture_number ASC, id ASC;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [220, 0],
+      "id": "get-questions",
+      "name": "Get Questions from Bank",
+      "credentials": {
+        "postgres": {
+          "id": "supabase-postgres",
+          "name": "Supabase Postgres"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $('Webhook').first().json.body || {};\nconst subject_id = body.subject_id || '0';\nconst subject_name = body.subject_name || '';\nconst allRows = items.map(i => i.json).filter(r => r && r.question);\n\nif (allRows.length === 0) {\n  return [{\n    json: {\n      subject_id,\n      subject_name,\n      selected_ids: [],\n      questions_html: '<p style=\"text-align:center;color:#ef4444;font-size:16px;padding:40px;\">⚠️ لا توجد أي أسئلة مخزنة في بنك هذه المادة بعد. يرجى رفع ملفات المحاضرات أولاً.</p>',\n      answers_html: '<p style=\"text-align:center;color:#64748b;font-size:16px;padding:40px;\">لا توجد إجابات متاحة.</p>'\n    }\n  }];\n}\n\n// Find maximum lecture number\nconst maxLecture = Math.max(...allRows.map(r => parseInt(r.lecture_number || 1, 10)));\n\nfunction shuffle(arr) {\n  const a = [...arr];\n  for (let i = a.length - 1; i > 0; i--) {\n    const j = Math.floor(Math.random() * (i + 1));\n    [a[i], a[j]] = [a[j], a[i]];\n  }\n  return a;\n}\n\nfunction pickWithPreference(pool, count) {\n  const unused = shuffle(pool.filter(q => !q.used));\n  const used = shuffle(pool.filter(q => q.used));\n  const picked = unused.slice(0, count);\n  if (picked.length < count) {\n    picked.push(...used.slice(0, count - picked.length));\n  }\n  return picked;\n}\n\nlet selectedQuestions = [];\n\nif (maxLecture > 3) {\n  const recentLectures = [maxLecture - 2, maxLecture - 1, maxLecture];\n  const recentPool = allRows.filter(r => recentLectures.includes(parseInt(r.lecture_number, 10)));\n  const olderPool = allRows.filter(r => !recentLectures.includes(parseInt(r.lecture_number, 10)));\n\n  let recentPicked = pickWithPreference(recentPool, 5);\n  let olderPicked = pickWithPreference(olderPool, 5);\n\n  // Backfill if one pool doesn't have 5\n  if (recentPicked.length < 5 && olderPool.length > olderPicked.length) {\n    const extraNeeded = 5 - recentPicked.length;\n    const extraOlder = olderPool.filter(q => !olderPicked.some(op => op.id === q.id));\n    olderPicked.push(...pickWithPreference(extraOlder, extraNeeded));\n  } else if (olderPicked.length < 5 && recentPool.length > recentPicked.length) {\n    const extraNeeded = 5 - olderPicked.length;\n    const extraRecent = recentPool.filter(q => !recentPicked.some(rp => rp.id === q.id));\n    recentPicked.push(...pickWithPreference(extraRecent, extraNeeded));\n  }\n\n  selectedQuestions = shuffle([...recentPicked, ...olderPicked]);\n} else {\n  selectedQuestions = pickWithPreference(allRows, 10);\n}\n\n// If total pool is less than 10, take all available\nif (selectedQuestions.length === 0) {\n  selectedQuestions = allRows.slice(0, 10);\n}\n\nfunction escapeHtml(str) {\n  if (!str) return '';\n  return String(str)\n    .replace(/&/g, '&amp;')\n    .replace(/</g, '&lt;')\n    .replace(/>/g, '&gt;')\n    .replace(/\"/g, '&quot;')\n    .replace(/'/g, '&#039;');\n}\n\nconst qItems = selectedQuestions.map(q => `<li style=\"margin-bottom:14px; font-size:15px; color:#101828;\">${escapeHtml(q.question)}</li>`).join('');\nconst aItems = selectedQuestions.map(q => `<li style=\"margin-bottom:14px; font-size:14.5px; color:#1e293b;\">${escapeHtml(q.answer)}</li>`).join('');\n\nconst questions_html = `<ol style=\"padding-right:20px; line-height:1.8; margin:0;\">${qItems}</ol>`;\nconst answers_html = `<ol style=\"padding-right:20px; line-height:1.8; margin:0;\">${aItems}</ol>`;\nconst selected_ids = selectedQuestions.map(q => q.id).filter(Boolean);\n\nreturn [{\n  json: {\n    subject_id,\n    subject_name,\n    selected_ids,\n    questions_html,\n    answers_html\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 0],
+      "id": "apply-50-rule",
+      "name": "Apply 50% Rule & Generate Exam HTML"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "={{ $json.selected_ids.length > 0 ? \"UPDATE question_bank SET used = TRUE WHERE id = ANY(ARRAY[\" + $json.selected_ids.join(',') + \"]::bigint[]);\" : \"SELECT 1;\" }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [660, 0],
+      "id": "mark-used",
+      "name": "Mark Questions Used",
+      "credentials": {
+        "postgres": {
+          "id": "supabase-postgres",
+          "name": "Supabase Postgres"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO exam_history (subject_id, subject_name, questions_html, answers_html)\nVALUES (\n  '{{ $('Apply 50% Rule & Generate Exam HTML').first().json.subject_id }}',\n  '{{ $('Apply 50% Rule & Generate Exam HTML').first().json.subject_name.replace(/'/g, \"''\") }}',\n  '{{ $('Apply 50% Rule & Generate Exam HTML').first().json.questions_html.replace(/'/g, \"''\") }}',\n  '{{ $('Apply 50% Rule & Generate Exam HTML').first().json.answers_html.replace(/'/g, \"''\") }}'\n);",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [880, 0],
+      "id": "insert-history",
+      "name": "Insert into exam_history",
+      "credentials": {
+        "postgres": {
+          "id": "supabase-postgres",
+          "name": "Supabase Postgres"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"questions_html\": {{ JSON.stringify($('Apply 50% Rule & Generate Exam HTML').first().json.questions_html) }},\n  \"answers_html\": {{ JSON.stringify($('Apply 50% Rule & Generate Exam HTML').first().json.answers_html) }}\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1100, 0],
+      "id": "respond-exam",
+      "name": "Respond with Exam"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Get Questions from Bank",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Questions from Bank": {
+      "main": [
+        [
+          {
+            "node": "Apply 50% Rule & Generate Exam HTML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Apply 50% Rule & Generate Exam HTML": {
+      "main": [
+        [
+          {
+            "node": "Mark Questions Used",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark Questions Used": {
+      "main": [
+        [
+          {
+            "node": "Insert into exam_history",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert into exam_history": {
+      "main": [
+        [
+          {
+            "node": "Respond with Exam",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

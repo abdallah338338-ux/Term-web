@@ -1,0 +1,2024 @@
+<!DOCTYPE html>
+<html lang="en" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TermBoard | لوحة تجهيز الترم</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800;900&family=IBM+Plex+Sans+Arabic:wght@400;500;600&family=Poppins:wght@600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --accent:#3E7BFA;
+    --accent-dark:#2557D6;
+    --accent-pale:#EAF1FF;
+    --text-main:#101828;
+    --text-secondary:#65708A;
+    --border:#E3E8F0;
+    --card:#FFFFFF;
+    --bg:#F8FAFD;
+    --danger:#ef4444;
+  }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body{
+    margin:0; background:var(--bg); color:var(--text-main);
+    font-family:"IBM Plex Sans Arabic", sans-serif; min-height:100vh;
+  }
+  h1,h2,h3,.display{ font-family:"Cairo", sans-serif; font-weight:800; }
+  .en{ font-family:"Poppins", sans-serif; }
+  .container{ max-width:1220px; margin:0 auto; padding:0 24px; }
+
+  /* Navbar */
+  .navbar{ border-bottom:1px solid var(--border); background:var(--card); position:sticky; top:0; z-index:5; }
+  .navbar .container{ display:flex; align-items:center; justify-content:space-between; padding:16px 24px; gap:12px; }
+  .logo{ display:flex; align-items:center; gap:9px; font-family:"Poppins", sans-serif; font-weight:800; font-size:17px; }
+  .logo .badge{
+    width:36px; height:36px; border-radius:11px;
+    background:linear-gradient(135deg, var(--accent), var(--accent-dark));
+    color:#fff; display:flex; align-items:center; justify-content:center; font-size:17px; flex-shrink:0;
+  }
+  .date-pill{ font-size:12.5px; color:var(--text-secondary); background:var(--accent-pale); border:1px solid var(--border); border-radius:999px; padding:7px 16px; white-space:nowrap; }
+
+  /* ---------- Landing hero ---------- */
+ .landing {
+    padding: 70px 0 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 300px;
+    flex-wrap: wrap;
+}
+.landing-text {
+    max-width: 520px;
+    text-align: end;
+ 
+    flex-direction: column;
+    align-items: center;
+}
+  
+.landing-greet {
+    font-family: "Poppins", sans-serif;
+    letter-spacing: .03em;
+    /* font-size
+Indicates the desired height of glyphs from the font. For scalable fonts, the font-size is a scale factor applied to the EM unit of the font. (Note that certain glyphs may bleed outside their EM box.) For non-scalable fonts, the font-size is converted into absolute units and matched against the declared font-size of the font, using the same absolute coordinate space for both of the matched values.
+
+Widely available across major browsers (Baseline since January 2018)
+Learn more
+
+Don’t show
+: 12.5px; */
+    font-weight: 700;
+    color: var(--accent-dark);
+    background: var(--accent-pale);
+    border-radius: 999px;
+    padding: 7px 18px;
+    margin-bottom: 20px;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;}
+
+  .landing-text h1{
+    font-family:"Poppins", sans-serif; font-weight:800;
+    margin:0 0 16px; font-size:40px; line-height:1.2; color:var(--text-main); letter-spacing:-.01em;
+  }
+  .landing-text h1 span{ color:var(--accent-dark); }
+  .landing-text .landing-sub{
+    font-family:"Poppins", sans-serif; font-size:14px; color:var(--text-secondary);
+    margin:0 0 26px; line-height:1.75; max-width:38ch;
+  }
+  .cta-btn{
+    background:var(--accent); color:#fff; border:none; border-radius:12px;
+    font-family:"Poppins", sans-serif; font-weight:700; font-size:14.5px;
+    padding:14px 32px; cursor:pointer; transition:.15s;
+    box-shadow:0 10px 26px rgba(62,123,250,0.3);
+  }
+  .cta-btn:hover{ background:var(--accent-dark); transform:translateY(-1px); }
+
+  /* Hero art — character photo */
+.hero-art {
+    position: relative;
+    width: 340px;
+    max-width: 46vw;
+    flex-shrink: 0;
+}
+  .hero-art .char-photo{
+    width:100%; height:auto; display:block; border-radius:26px;
+    box-shadow:0 24px 50px rgba(37,87,214,0.28);
+  }
+
+  .app-area{ padding:8px 0 10px; }
+  .breadcrumb{ display:flex; align-items:center; justify-content:center; gap:8px; font-size:13px; color:var(--text-secondary); margin-bottom:24px; }
+  .breadcrumb .crumb-link{ cursor:pointer; }
+  .breadcrumb .crumb-link:hover{ color:var(--accent-dark); text-decoration:underline; }
+  .breadcrumb .crumb-accent{ color:var(--accent-dark); font-weight:700; }
+
+  /* ---------- Root: Q&W tool card beside a 2x2 subjects grid ---------- */
+  .dashboard-layout{
+    display:flex; direction:ltr; gap:26px; justify-content:center;
+    align-items:stretch; flex-wrap:wrap;
+  }
+  .qw-card-wrap{ width:300px; flex-shrink:0; direction:rtl; }
+  .grid-view.subjects-grid{
+    display:grid; grid-template-columns:repeat(2, minmax(220px, 300px)); gap:26px;
+    direction:rtl; align-content:start;
+  }
+  .folder-card{
+    background:var(--card); border:1px solid var(--border);
+    border-top:4px solid var(--card-color, var(--accent));
+    border-radius:14px; padding:30px 20px 24px; text-align:center; cursor:pointer;
+    user-select:none; transition:.15s; position:relative;
+  }
+  .folder-card:hover{ box-shadow:0 10px 26px rgba(16,24,40,0.12); transform:translateY(-3px); }
+  .folder-top-row{ display:flex; align-items:center; justify-content:center; gap:10px; position:relative; }
+  .folder-icon-btn{
+    width:72px; height:72px; border-radius:19px; background:var(--accent-pale); color:var(--accent-dark);
+    display:flex; align-items:center; justify-content:center; font-size:32px; margin:0 auto 16px; cursor:pointer;
+    border:none;
+  }
+  .folder-icon-btn:hover{ background:var(--accent); color:#fff; }
+  .color-dot-btn{
+    position:absolute; left:calc(50% + 46px); top:6px;
+    width:22px; height:22px; border-radius:50%; border:2px solid #fff;
+    box-shadow:0 0 0 1px var(--border); cursor:pointer; background:var(--card-color, var(--accent));
+  }
+  .folder-name{
+    width:100%; background:transparent; border:none; text-align:center;
+    font-family:"Cairo", sans-serif; font-weight:700; font-size:16px; color:var(--text-main);
+    border-bottom:1.5px dashed transparent; padding:4px 2px;
+  }
+  .folder-name:hover, .folder-name:focus{ border-bottom-color:var(--border); outline:none; }
+  .folder-name::placeholder{ color:#b3bccb; font-weight:600; }
+  .folder-count{ margin-top:8px; font-size:12px; color:var(--text-secondary); }
+  .folder-progress{ margin-top:12px; height:7px; border-radius:999px; background:var(--accent-pale); overflow:hidden; }
+  .folder-progress-fill{ height:100%; background:var(--accent); border-radius:999px; }
+
+  /* ---------- Subject detail: file boxes ---------- */
+  .subject-title-row{ display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:22px; }
+  .subject-title-row .st-icon{ font-size:26px; }
+  .subject-title-row h2{ margin:0; font-size:19px; }
+  .subject-title-row .st-count{ font-size:12.5px; color:var(--text-secondary); background:var(--accent-pale); border-radius:999px; padding:4px 12px; }
+
+  .files-grid{
+    display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 200px)); gap:20px;
+    justify-content:center;
+  }
+  .file-box{
+    border-radius:16px; min-height:200px; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; gap:12px; padding:20px 14px; transition:.15s; position:relative;
+    border-top:4px solid var(--card-color, var(--accent));
+  }
+  .file-box.empty{
+    border-left:2px dashed var(--border); border-right:2px dashed var(--border); border-bottom:2px dashed var(--border);
+    background:transparent; cursor:pointer; color:var(--text-secondary);
+  }
+  .file-box.empty:hover{ background:var(--accent-pale); color:var(--accent-dark); }
+  .file-box.empty .plus-circle{
+    width:44px; height:44px; border-radius:50%; border:2px dashed currentColor;
+    display:flex; align-items:center; justify-content:center; font-size:20px; font-weight:800;
+  }
+  .file-box.empty .empty-label{ font-size:12px; font-weight:600; }
+
+  .file-box.filled{
+    border-left:1px solid var(--border); border-right:1px solid var(--border); border-bottom:1px solid var(--border);
+    background:var(--card); cursor:pointer;
+  }
+  .file-box.filled:hover{ box-shadow:0 8px 20px rgba(16,24,40,0.12); }
+  .file-box .pdf-icon{
+    width:50px; height:60px; border-radius:7px; background:var(--accent-pale);
+    border:1px solid var(--accent); color:var(--accent-dark);
+    display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:800;
+    font-family:"Poppins", sans-serif;
+  }
+  .file-box .fname{
+    font-size:12px; text-align:center; line-height:1.4; color:var(--text-main);
+    overflow:hidden; display:-webkit-box;  -webkit-box-orient:vertical;
+    word-break:break-word; max-width:100%;
+  }
+  .file-box .lec-tag{
+    position:absolute; top:12px; right:12px; font-size:10.5px; font-weight:700; color:var(--accent-dark);
+    background:var(--accent-pale); border-radius:999px; padding:2px 8px;
+  }
+  .file-box .remove-x{
+    position:absolute; top:10px; left:10px; width:24px; height:24px; border-radius:50%;
+    border:none; background:var(--card); color:var(--text-secondary); font-size:13px; line-height:1;
+    display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 1px 4px rgba(0,0,0,0.12);
+  }
+  .file-box .remove-x:hover{ background:var(--danger); color:#fff; }
+
+  .limit-note{
+    text-align:center; padding:18px; color:var(--text-secondary); font-size:12.5px;
+    border:1.5px dashed var(--border); border-radius:14px; grid-column:1/-1;
+  }
+
+  .note{ padding:34px 0 50px; font-size:12px; color:var(--text-secondary); line-height:1.7; max-width:60ch; margin:0 auto; text-align:center; }
+  .page-end-spacer{ height:20px; }
+
+  input[type=file]{ display:none; }
+
+  /* ---------- Icon picker popover ---------- */
+  .icon-popover{
+    position:absolute; z-index:20; background:var(--card); border:1px solid var(--border); border-radius:12px;
+    box-shadow:0 10px 30px rgba(0,0,0,0.14); padding:10px; display:none;
+    grid-template-columns:repeat(6, 1fr); gap:6px; width:216px;
+  }
+  .icon-popover.open{ display:grid; }
+  .icon-popover button{
+    width:30px; height:30px; border-radius:8px; border:1px solid transparent; background:transparent;
+    font-size:16px; cursor:pointer; display:flex; align-items:center; justify-content:center;
+  }
+  .icon-popover button:hover{ background:var(--accent-pale); border-color:var(--accent); }
+
+  /* ---------- Color picker popover ---------- */
+  .color-popover{
+    position:absolute; z-index:20; background:var(--card); border:1px solid var(--border); border-radius:12px;
+    box-shadow:0 10px 30px rgba(0,0,0,0.14); padding:10px; display:none;
+    align-items:center; gap:8px;
+  }
+  .color-popover.open{ display:flex; }
+  .color-popover button{
+    width:24px; height:24px; border-radius:50%; border:2px solid #fff; box-shadow:0 0 0 1px var(--border);
+    cursor:pointer; padding:0;
+  }
+  .color-popover button:hover{ transform:scale(1.15); }
+
+  /* ---------- Preview modal ---------- */
+  .modal-overlay{
+    position:fixed; inset:0; background:rgba(16,24,40,0.6); display:none;
+    align-items:center; justify-content:center; z-index:50; padding:24px;
+  }
+  .modal-overlay.open{ display:flex; }
+  .modal-box{
+    background:var(--card); border-radius:16px; width:100%; max-width:860px; height:min(86vh, 900px);
+    display:flex; flex-direction:column; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,0.3);
+  }
+  .modal-head{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    padding:12px 16px; border-bottom:1px solid var(--border); flex-shrink:0;
+  }
+  .modal-head .mh-title{ font-family:"Cairo", sans-serif; font-weight:700; font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .modal-head .mh-actions{ display:flex; align-items:center; gap:8px; flex-shrink:0; }
+  .mh-btn{
+    border:1px solid var(--border); background:var(--card); color:var(--text-main); border-radius:8px;
+    padding:6px 12px; font-size:12px; cursor:pointer; font-family:"IBM Plex Sans Arabic", sans-serif;
+    text-decoration:none; display:inline-flex; align-items:center; gap:5px;
+  }
+  .mh-btn:hover{ border-color:var(--accent); color:var(--accent-dark); }
+  .mh-btn.close{ font-size:15px; padding:6px 10px; }
+  .modal-body{ flex:1; overflow:auto; background:#525659; }
+  .modal-body iframe{ width:100%; height:100%; border:none; display:block; }
+  .modal-empty{
+    height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:10px; color:#dfe1e4; background:#525659; padding:30px; text-align:center;
+  }
+  .modal-empty .big{ font-size:34px; }
+  .modal-empty p{ max-width:42ch; font-size:13px; line-height:1.8; color:#c9ccd1; margin:0; }
+
+  @media (max-width:860px){
+    .landing{ flex-direction:column; padding:44px 0 36px; gap:30px; }
+    .landing-text h1{ font-size:30px; }
+    .hero-art{ width:280px; max-width:80vw; }
+    .dashboard-layout{ flex-direction:column; align-items:center; }
+    .qw-card-wrap{ width:100%; max-width:380px; }
+    .subjects-grid{ grid-template-columns:repeat(2, minmax(140px,1fr)); width:100%; max-width:380px; }
+    .modal-box{ height:92vh; }
+  }
+
+  /* ─── Exam System ─────────────────────────── */
+
+  /* Bank stats bar */
+  .bank-stats{
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    background:var(--accent-pale); border:1px solid var(--border); border-radius:12px;
+    padding:12px 18px; margin-bottom:20px;
+  }
+  .bank-stats .bs-group{ display:flex; align-items:center; gap:16px; }
+  .bank-stat{ display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--text-secondary); }
+  .bank-stat strong{ color:var(--text-main); font-weight:800; }
+  .bank-stat .dot{ width:8px; height:8px; border-radius:50%; background:var(--accent); }
+  .bank-stat .dot.warn{ background:#f59e0b; }
+  .bank-stat .dot.ok{ background:#10b981; }
+
+  .exam-btn.secondary{ background:#fff; color:var(--text-main); border:1px solid var(--border); box-shadow:none; }
+  .exam-btn.secondary:hover:not(:disabled){ border-color:var(--accent); color:var(--accent-dark); background:var(--accent-pale); }
+
+  .exam-history-list{
+    max-width:640px; margin:16px auto 0; display:flex; flex-direction:column; gap:8px;
+  }
+  .exam-history-item{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    background:var(--card); border:1px solid var(--border); border-radius:10px;
+    padding:10px 14px; cursor:pointer; transition:.15s; font-size:12.5px;
+  }
+  .exam-history-item:hover{ border-color:var(--accent); background:var(--accent-pale); }
+  .exam-history-item .eh-date{ color:var(--text-secondary); }
+  .exam-history-item .eh-open{ color:var(--accent-dark); font-weight:700; }
+  .exam-history-empty, .exam-history-error{
+    text-align:center; font-size:12.5px; color:var(--text-secondary); padding:10px;
+  }
+
+  /* Exam button */
+  .exam-btn{
+    display:flex; align-items:center; gap:8px; padding:10px 20px;
+    border:none; border-radius:10px; cursor:pointer; font-family:"Cairo", sans-serif;
+    font-weight:800; font-size:13.5px; transition:.15s;
+    background:linear-gradient(135deg,#6366f1,#4f46e5);
+    color:#fff; box-shadow:0 6px 18px rgba(99,102,241,0.35);
+  }
+  .exam-btn:hover{ transform:translateY(-2px); box-shadow:0 10px 26px rgba(99,102,241,0.45); }
+  .exam-btn:disabled{ opacity:.55; cursor:not-allowed; transform:none; }
+  .exam-btn .spin{ display:inline-block; animation:spin .8s linear infinite; }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+
+  /* Extraction toast */
+  .extract-toast{
+    position:fixed; bottom:24px; left:24px; z-index:100;
+    background:#1e1e2e; color:#e0e0ff; border-radius:12px;
+    padding:14px 20px; display:flex; align-items:center; gap:12px;
+    box-shadow:0 8px 30px rgba(0,0,0,0.3); font-size:13px;
+    animation:slideUp .25s ease; max-width:340px;
+    border-left:4px solid #6366f1;
+  }
+  .extract-toast.success{ border-left-color:#10b981; }
+  .extract-toast.error{ border-left-color:#ef4444; }
+  @keyframes slideUp{ from{ transform:translateY(20px); opacity:0; } to{ transform:translateY(0); opacity:1; } }
+
+  /* Exam modal overlay */
+  .exam-overlay{
+    position:fixed; inset:0; background:rgba(16,24,40,0.7);
+    display:none; align-items:center; justify-content:center;
+    z-index:60; padding:20px;
+  }
+  .exam-overlay.open{ display:flex; }
+  .exam-modal{
+    background:#1e1e2e; border-radius:16px; width:100%; max-width:900px;
+    height:min(90vh, 950px); display:flex; flex-direction:column;
+    overflow:hidden; box-shadow:0 24px 70px rgba(0,0,0,0.5);
+  }
+  .exam-modal-head{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:14px 18px; background:#13131f; border-bottom:1px solid rgba(255,255,255,0.08);
+    flex-shrink:0;
+  }
+  .exam-modal-title{ font-family:"Cairo",sans-serif; font-weight:800; font-size:14.5px; color:#e0e0ff; }
+  .exam-modal-actions{ display:flex; gap:8px; align-items:center; }
+  .em-btn{
+    border:1px solid rgba(255,255,255,0.15); background:rgba(255,255,255,0.07);
+    color:#c0c0e0; border-radius:8px; padding:6px 13px; font-size:12px;
+    cursor:pointer; transition:.12s;
+  }
+  .em-btn:hover{ border-color:#6366f1; color:#a5b4fc; }
+  .em-btn.close{ font-size:16px; padding:6px 11px; }
+  .exam-modal-body{ flex:1; overflow:auto; background:#525659; position:relative; }
+  .exam-modal-body iframe{ width:100%; height:100%; border:none; display:block; }
+
+  /* Loading state inside exam modal */
+  .exam-loading{
+    height:100%; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; gap:18px;
+    background:#13131f; color:#c0c0e0; padding:40px; text-align:center;
+  }
+  .exam-loading .loader-ring{
+    width:60px; height:60px; border-radius:50%;
+    border:5px solid rgba(99,102,241,0.2);
+    border-top-color:#6366f1;
+    animation:spin .9s linear infinite;
+  }
+  .exam-loading .loader-title{ font-family:"Cairo",sans-serif; font-weight:800; font-size:17px; color:#a5b4fc; }
+  .exam-loading .loader-sub{ font-size:13px; color:#6b7280; max-width:30ch; line-height:1.7; }
+  .exam-loading .loader-steps{ display:flex; flex-direction:column; gap:6px; margin-top:8px; width:100%; max-width:260px; }
+  .loader-step{
+    display:flex; align-items:center; gap:10px; font-size:12.5px;
+    padding:8px 14px; border-radius:8px; background:rgba(99,102,241,0.06);
+    color:#9ca3af; transition:.3s;
+  }
+  .loader-step.active{ background:rgba(99,102,241,0.15); color:#a5b4fc; }
+  .loader-step.done{ color:#10b981; }
+  .loader-step .step-icon{ font-size:16px; }
+  /* ══════ Q&W SHEET MAKER — OVERLAY STYLES ══════ */
+  .qw-overlay{
+    position:fixed; inset:0; background:rgba(10,10,30,0.75);
+    display:none; align-items:center; justify-content:center;
+    z-index:70; padding:16px;
+  }
+  .qw-overlay.open{ display:flex; }
+  .qw-modal{
+    background:#fff; border-radius:20px; width:100%; max-width:980px;
+    height:min(92vh, 1000px); display:flex; flex-direction:column;
+    overflow:hidden; box-shadow:0 28px 80px rgba(0,0,0,0.45);
+  }
+  .qw-head{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    padding:16px 22px; background:linear-gradient(135deg,#1e293b,#0f172a);
+    border-bottom:1px solid rgba(255,255,255,0.08); flex-shrink:0;
+  }
+  .qw-head-title{
+    font-family:"Cairo",sans-serif; font-weight:800; font-size:16px;
+    color:#f1f5f9; display:flex; align-items:center; gap:9px;
+  }
+  .qw-head-badge{
+    background:linear-gradient(135deg,#6366f1,#818cf8); border-radius:10px;
+    padding:6px 12px; font-size:13px; color:#fff; font-weight:700; letter-spacing:.3px;
+  }
+  .qw-head-actions{ display:flex; gap:8px; align-items:center; }
+  .qw-btn{
+    border:1px solid rgba(255,255,255,0.18); background:rgba(255,255,255,0.08);
+    color:#c7d2fe; border-radius:8px; padding:7px 14px; font-size:12.5px;
+    cursor:pointer; transition:.12s; font-family:"Cairo",sans-serif; font-weight:700;
+  }
+  .qw-btn:hover{ border-color:#818cf8; color:#a5b4fc; background:rgba(99,102,241,0.15); }
+  .qw-btn.danger:hover{ border-color:#ef4444; color:#fca5a5; }
+  .qw-btn.close-x{ font-size:18px; padding:5px 11px; }
+
+  /* Two-panel body */
+  .qw-body{ flex:1; display:flex; overflow:hidden; min-height:0; }
+
+  /* LEFT: Upload panel */
+  .qw-upload-panel{
+    width:320px; flex-shrink:0; background:#f8fafd; border-left:1px solid #e3e8f0;
+    overflow-y:auto; padding:22px 18px; display:flex; flex-direction:column; gap:16px;
+  }
+  .qw-panel-title{
+    font-family:"Cairo",sans-serif; font-weight:800; font-size:14px; color:#1e293b;
+    display:flex; align-items:center; gap:7px; margin-bottom:2px;
+  }
+  .qw-drop-zone{
+    border:2px dashed #c7d2fe; border-radius:14px; padding:20px 14px;
+    text-align:center; cursor:pointer; transition:.2s; background:#fff;
+    display:flex; flex-direction:column; align-items:center; gap:8px;
+  }
+  .qw-drop-zone:hover, .qw-drop-zone.drag-over{ border-color:#6366f1; background:#eef2ff; }
+  .qw-drop-zone .dz-icon{ font-size:32px; }
+  .qw-drop-zone .dz-label{
+    font-family:"Cairo",sans-serif; font-weight:700; font-size:13px; color:#475569;
+  }
+  .qw-drop-zone .dz-sub{ font-size:11px; color:#94a3b8; }
+  .qw-drop-zone.has-file{ border-color:#10b981; background:#f0fdf4; }
+  .qw-drop-zone.has-file .dz-icon::before{ content:"✅ "; }
+  .qw-file-name{
+    font-size:11.5px; color:#059669; font-weight:700; word-break:break-all; text-align:center;
+  }
+  .qw-generate-btn{
+    width:100%; padding:13px; border:none; border-radius:12px; cursor:pointer;
+    background:linear-gradient(135deg,#6366f1,#4f46e5); color:#fff;
+    font-family:"Cairo",sans-serif; font-weight:800; font-size:15px;
+    box-shadow:0 6px 20px rgba(99,102,241,0.4); transition:.15s; display:flex;
+    align-items:center; justify-content:center; gap:8px;
+  }
+  .qw-generate-btn:hover:not(:disabled){ transform:translateY(-2px); box-shadow:0 10px 28px rgba(99,102,241,0.5); }
+  .qw-generate-btn:disabled{ opacity:.55; cursor:not-allowed; transform:none; }
+  .qw-divider{ border:none; border-top:1px solid #e3e8f0; margin:4px 0; }
+  .qw-history-title{
+    font-family:"Cairo",sans-serif; font-weight:800; font-size:13px;
+    color:#334155; display:flex; align-items:center; gap:6px;
+  }
+  .qw-history-list{ display:flex; flex-direction:column; gap:8px; }
+  .qw-history-item{
+    background:#fff; border:1px solid #e3e8f0; border-radius:10px;
+    padding:10px 13px; cursor:pointer; transition:.15s;
+  }
+  .qw-history-item:hover{ border-color:#6366f1; background:#eef2ff; }
+  .qw-history-item .qh-title{
+    font-family:"Cairo",sans-serif; font-weight:700; font-size:12.5px; color:#1e293b;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .qw-history-item .qh-sub{
+    font-size:11px; color:#94a3b8; margin-top:2px;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+
+  /* RIGHT: Preview panel */
+  .qw-preview-panel{
+    flex:1; overflow-y:auto; background:#525659; position:relative;
+    display:flex; flex-direction:column;
+  }
+  .qw-preview-empty{
+    flex:1; display:flex; flex-direction:column; align-items:center;
+    justify-content:center; gap:14px; color:#9ca3af; padding:40px; text-align:center;
+  }
+  .qw-preview-empty .pe-icon{ font-size:52px; opacity:.4; }
+  .qw-preview-empty p{ font-family:"Cairo",sans-serif; font-size:14px; line-height:1.7; max-width:28ch; }
+  .qw-preview-loading{
+    flex:1; display:flex; flex-direction:column; align-items:center;
+    justify-content:center; gap:18px; background:#1e1e2e; color:#c0c0e0; padding:40px; text-align:center;
+  }
+  .qw-preview-loading .qw-ring{
+    width:64px; height:64px; border-radius:50%;
+    border:5px solid rgba(99,102,241,0.2); border-top-color:#6366f1;
+    animation:spin .9s linear infinite;
+  }
+  .qw-preview-loading .qw-loading-title{
+    font-family:"Cairo",sans-serif; font-weight:800; font-size:18px; color:#a5b4fc;
+  }
+  .qw-preview-loading .qw-loading-steps{
+    display:flex; flex-direction:column; gap:6px; width:100%; max-width:280px;
+  }
+  .qw-step{
+    display:flex; align-items:center; gap:10px; font-size:12.5px;
+    padding:8px 14px; border-radius:8px; background:rgba(99,102,241,0.06);
+    color:#9ca3af; transition:.3s;
+  }
+  .qw-step.active{ background:rgba(99,102,241,0.15); color:#a5b4fc; }
+  .qw-step.done{ color:#10b981; }
+  .qw-preview-iframe{ width:100%; height:100%; border:none; flex:1; display:block; }
+
+  /* Q&W CARD — matches folder-card style with hero image like screenshot */
+  .qw-card{
+    background:var(--card); border:1px solid var(--border);
+    border-top:4px solid #6366f1;
+    border-radius:14px; padding:0; text-align:center;
+    cursor:pointer; user-select:none; transition:.15s; position:relative;
+    overflow:hidden; display:flex; flex-direction:column; height:100%;
+  }
+  .qw-card:hover{ box-shadow:0 10px 26px rgba(99,102,241,0.22); transform:translateY(-3px); }
+  .qw-card .qw-hero-img{
+    width:100%; flex:1 1 auto; min-height:170px; object-fit:cover; object-position:center top;
+    display:block; border-radius:0;
+  }
+  .qw-card .qw-card-body{
+    padding:18px 16px 20px; display:flex; flex-direction:column; align-items:center; gap:6px; flex-shrink:0;
+  }
+  .qw-card .qw-card-title{
+    font-family:"Cairo",sans-serif; font-weight:800; font-size:17px;
+    color:var(--text-main); margin:0;
+  }
+  .qw-card .qw-card-sub{
+    font-size:11.5px; color:var(--text-secondary); line-height:1.5; margin:0;
+  }
+  .qw-card .qw-card-badge{
+    display:inline-flex; align-items:center; gap:5px; margin-top:4px;
+    background:#eef2ff; border:1px solid #c7d2fe;
+    border-radius:999px; padding:3px 12px;
+    font-size:11px; font-weight:700; color:#6366f1;
+  }
+  .qw-card .qw-progress-bar{
+    height:7px; border-radius:999px; background:#eef2ff; overflow:hidden; margin-top:10px; width:100%;
+  }
+  .qw-card .qw-progress-fill{ height:100%; background:#6366f1; border-radius:999px; width:100%; }
+</style>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+</head>
+<body>
+
+<div class="navbar">
+  <div class="container">
+    <span class="date-pill" id="tb-date">—</span>
+    <div class="logo"><span class="badge">🗓️</span><span>Term<span style="color:var(--accent-dark)">Board</span></span></div>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- Landing / welcome section -->
+  <div class="landing">
+    <div class="hero-art">
+      <img class="char-photo" src="hero-character.jpeg" alt="Engineering student character">
+    </div>
+    <div class="landing-text">
+      <span class="landing-greet en">WELCOME ABDALLAH 👋</span>
+      <h1 class="en">LET'S GET <span>READY.</span></h1>
+      <p class="landing-sub en">Organize your subjects, track every lecture, and stay exam-ready — all in one place.</p>
+      <button class="cta-btn en" id="cta-start" type="button">🚀 Get Started</button>
+    </div>
+  </div>
+
+  <div class="app-area">
+    <div class="breadcrumb" id="breadcrumb"></div>
+    <div id="view-root"></div>
+  </div>
+
+  <p class="note">Only file names are saved as progress — previews work for files added in the current browser session.</p>
+  <div class="page-end-spacer"></div>
+</div>
+
+<!-- Icon picker -->
+<div class="icon-popover" id="icon-popover"></div>
+
+<!-- Color picker -->
+<div class="color-popover" id="color-popover"></div>
+
+<!-- Preview modal -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal-box">
+    <div class="modal-head">
+      <span class="mh-title" id="modal-title">—</span>
+      <div class="mh-actions">
+        <a class="mh-btn" id="modal-open-tab" href="#" target="_blank" rel="noopener">⤢ فتح كامل</a>
+        <button class="mh-btn close" id="modal-close" type="button">✕</button>
+      </div>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+
+<!-- Exam Selection Overlay (شامل vs مخصص) -->
+<div class="modal-overlay" id="exam-select-overlay">
+  <div class="modal-box" style="max-width:480px; padding:24px; border-radius:16px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+      <span style="font-family:'Cairo',sans-serif; font-weight:800; font-size:17px; color:var(--text-main);" id="select-modal-title">🎓 إنشاء امتحان جديد</span>
+      <button class="mh-btn close" id="exam-select-close" type="button" style="font-size:18px; cursor:pointer;">✕</button>
+    </div>
+    <p style="font-size:13.5px; color:var(--text-secondary); margin:0 0 16px;">اختر نوع الامتحان الذي تريد إنشاءه:</p>
+    
+    <div style="display:flex; flex-direction:column; gap:12px; margin-bottom:20px;">
+      <label style="display:flex; align-items:flex-start; gap:10px; padding:12px 14px; border:2px solid var(--accent); border-radius:12px; background:var(--accent-pale); cursor:pointer;" id="opt-all-label">
+        <input type="radio" name="exam-type" value="all" checked style="margin-top:4px;">
+        <div>
+          <div style="font-weight:700; font-size:14px; color:var(--text-main);">🌟 امتحان شامل (جميع المحاضرات)</div>
+          <div style="font-size:12px; color:var(--text-secondary); margin-top:2px;">يطبق قاعدة 50% (نصف الأسئلة من أحدث 3 محاضرات ونصف من باقي المحاضرات).</div>
+        </div>
+      </label>
+
+      <label style="display:flex; align-items:flex-start; gap:10px; padding:12px 14px; border:1px solid var(--border); border-radius:12px; background:#fff; cursor:pointer;" id="opt-custom-label">
+        <input type="radio" name="exam-type" value="custom" style="margin-top:4px;">
+        <div style="width:100%;">
+          <div style="font-weight:700; font-size:14px; color:var(--text-main);">🎯 امتحان مخصص لمحاضرات محددة</div>
+          <div style="font-size:12px; color:var(--text-secondary); margin-top:2px;">حدد المحاضرات التي تريد توليد الامتحان منها:</div>
+          <div id="lecture-checkboxes-container" style="display:none; margin-top:10px; flex-direction:column; gap:6px; max-height:160px; overflow-y:auto; padding:8px; background:var(--bg); border-radius:8px; border:1px solid var(--border);"></div>
+        </div>
+      </label>
+    </div>
+
+    <button type="button" id="start-exam-gen-btn" class="cta-btn" style="width:100%; text-align:center; padding:12px;">🚀 ابدأ إنشاء الامتحان</button>
+  </div>
+</div>
+
+<!-- Exam modal -->
+<div class="exam-overlay" id="exam-overlay">
+  <div class="exam-modal">
+    <div class="exam-modal-head">
+      <span class="exam-modal-title" id="exam-modal-title">🎓 إنشاء امتحان</span>
+      <div class="exam-modal-actions">
+        <a class="em-btn" id="exam-open-tab" href="#" target="_blank" rel="noopener" style="display:none">⤢ فتح الامتحان</a>
+        <button class="em-btn" id="exam-print-btn" style="display:none" onclick="document.getElementById('exam-frame').contentWindow.print()">🖨 طباعة</button>
+        <button class="em-btn close" id="exam-modal-close" type="button">✕</button>
+      </div>
+    </div>
+    <div class="exam-modal-body" id="exam-modal-body">
+      <div class="exam-loading" id="exam-loading">
+        <div class="loader-ring"></div>
+        <div class="loader-title">جارٍ إنشاء الامتحان...</div>
+        <div class="loader-sub">الذكاء الاصطناعي بيقرأ بنك الأسئلة ويختار أفضل 10 أسئلة</div>
+        <div class="loader-steps">
+          <div class="loader-step" id="lstep-1"><span class="step-icon">📚</span> تحميل بنك الأسئلة</div>
+          <div class="loader-step" id="lstep-2"><span class="step-icon">🎯</span> فرز وتوزيع المسائل الرياضية</div>
+          <div class="loader-step" id="lstep-3"><span class="step-icon">🖊</span> تنسيق صفحة الأسئلة بدقة</div>
+          <div class="loader-step" id="lstep-4"><span class="step-icon">✅</span> إعداد نموذج الإجابة النموذجي</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     Q&W SHEET MAKER — Full-Page Overlay Modal
+════════════════════════════════════════════════ -->
+<div class="qw-overlay" id="qw-overlay">
+  <div class="qw-modal">
+    <div class="qw-head">
+      <div class="qw-head-title">
+        <span class="qw-head-badge">Q&amp;W</span>
+        صانع شيتات الأسئلة والإجابات
+      </div>
+      <div class="qw-head-actions">
+        <button class="qw-btn" id="qw-open-tab" style="display:none">⤢ فتح كامل</button>
+        <button class="qw-btn" id="qw-print-btn" style="display:none" onclick="document.getElementById('qw-frame').contentWindow.print()">🖨 طباعة</button>
+        <button class="qw-btn close-x" id="qw-close" type="button">✕</button>
+      </div>
+    </div>
+    <div class="qw-body">
+      <div class="qw-preview-panel" id="qw-preview-panel">
+        <div class="qw-preview-empty" id="qw-preview-empty">
+          <div class="pe-icon">📄</div>
+          <p>ارفع ملف الأسئلة وملف الإجابات ثم اضغط «توليد الشيت» لتظهر هنا معاينة الشيت كاملاً جاهزة للطباعة</p>
+        </div>
+      </div>
+      <div class="qw-upload-panel">
+        <div class="qw-panel-title">📋 ملف الأسئلة</div>
+        <div class="qw-drop-zone" id="qw-dz-q">
+          <span class="dz-icon">📂</span>
+          <span class="dz-label">اسحب PDF هنا أو اضغط للاختيار</span>
+          <span class="dz-sub">Questions Sheet · PDF</span>
+          <span class="qw-file-name" id="qw-fname-q" style="display:none"></span>
+        </div>
+        <input type="file" id="qw-input-q" accept="application/pdf,image/*" style="display:none">
+        <div class="qw-panel-title">📝 ملف الإجابات</div>
+        <div class="qw-drop-zone" id="qw-dz-a">
+          <span class="dz-icon">📂</span>
+          <span class="dz-label">اسحب PDF هنا أو اضغط للاختيار</span>
+          <span class="dz-sub">Answers Sheet · PDF أو CamScanner</span>
+          <span class="qw-file-name" id="qw-fname-a" style="display:none"></span>
+        </div>
+        <input type="file" id="qw-input-a" accept="application/pdf,image/*" style="display:none">
+        <button class="qw-generate-btn" id="qw-generate-btn" disabled>
+          <span id="qw-gen-icon">✨</span>
+          <span id="qw-gen-label">توليد الشيت Q&amp;W</span>
+        </button>
+        <hr class="qw-divider">
+        <div class="qw-history-title">🕑 الشيتات السابقة</div>
+        <div class="qw-history-list" id="qw-history-list">
+          <div style="font-size:12px;color:#94a3b8;text-align:center;padding:8px;">جارٍ التحميل…</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+
+<script>
+const SUBJECT_COUNT = 4;
+const MAX_FILES = 11;
+const STORAGE_KEY = "term-tracker-state-v2";
+const ICONS = ["💻","🏗","📚","🎨","🧠","📈","🌐","🔬","⚖️","🎵","📷","📁"];
+const COLORS = ["#FF8A3D","#3b82f6","#10b981","#ef4444","#8b5cf6"];
+
+/* ─── Backend Endpoints (Render) ─────────────────────────────────── */
+const N8N_EXTRACT_URL        = "https://term-web.onrender.com/webhook/extract-questions";
+const N8N_GENERATE_URL       = "https://term-web.onrender.com/webhook/generate-exam";
+const N8N_BANK_INFO_URL      = "https://term-web.onrender.com/webhook/bank-info";
+const N8N_EXAM_HISTORY_URL   = "https://term-web.onrender.com/webhook/exam-history";
+const N8N_DELETE_LECTURE_URL = "https://term-web.onrender.com/webhook/delete-lecture";
+const EXAM_FEATURES_ENABLED  = true;
+
+let state = null;
+let currentPath = []; // [] = root, [subjectId] = inside subject
+const sessionFiles = {}; // key `${subjectId}-${fileId}` -> {file, url, name}
+const bankCache = {};
+const examHistoryCache = {};
+let currentExamSubject = null;
+
+/* ─── IndexedDB Persistent PDF Storage ───────────────────────────── */
+const DB_NAME = "TermBoardFilesDB";
+const DB_STORE = "pdf_files";
+let idb = null;
+
+function openFilesDB() {
+  return new Promise((resolve) => {
+    if (idb) return resolve(idb);
+    const req = indexedDB.open(DB_NAME, 1);
+    req.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(DB_STORE)) {
+        db.createObjectStore(DB_STORE, { keyPath: "id" });
+      }
+    };
+    req.onsuccess = (e) => { idb = e.target.result; resolve(idb); };
+    req.onerror = () => resolve(null);
+  });
+}
+
+async function savePdfToDB(id, fileBlob, name) {
+  const db = await openFilesDB();
+  if (!db) return;
+  return new Promise((resolve) => {
+    const tx = db.transaction(DB_STORE, "readwrite");
+    tx.objectStore(DB_STORE).put({ id, fileBlob, name });
+    tx.oncomplete = () => resolve(true);
+    tx.onerror = () => resolve(false);
+  });
+}
+
+async function deletePdfFromDB(id) {
+  const db = await openFilesDB();
+  if (!db) return;
+  return new Promise((resolve) => {
+    const tx = db.transaction(DB_STORE, "readwrite");
+    tx.objectStore(DB_STORE).delete(id);
+    tx.oncomplete = () => resolve(true);
+    tx.onerror = () => resolve(false);
+  });
+}
+
+async function getPdfFromDB(id) {
+  const db = await openFilesDB();
+  if (!db) return null;
+  return new Promise((resolve) => {
+    const tx = db.transaction(DB_STORE, "readonly");
+    const req = tx.objectStore(DB_STORE).get(id);
+    req.onsuccess = () => resolve(req.result ? req.result.fileBlob : null);
+    req.onerror = () => resolve(null);
+  });
+}
+
+async function restoreSessionFilesFromDB() {
+  if (!state || !state.subjects) return;
+  for (const sub of state.subjects) {
+    if (sub.files && sub.files.length) {
+      for (const f of sub.files) {
+        const key = `${sub.id}-${f.id}`;
+        try {
+          const blob = await getPdfFromDB(key);
+          if (blob) {
+            sessionFiles[key] = { file: blob, url: URL.createObjectURL(blob), name: f.name };
+          }
+        } catch (err) {
+          console.warn("Could not restore file:", key, err);
+        }
+      }
+    }
+  }
+}
+
+function defaultState(){
+  return {
+    subjects: Array.from({length: SUBJECT_COUNT}, (_, i) => ({
+      id: i,
+      name: "",
+      icon: ICONS[i % ICONS.length],
+      color: COLORS[i % COLORS.length],
+      files: []
+    }))
+  };
+}
+
+async function loadState(){
+  try{
+    let val = localStorage.getItem(STORAGE_KEY);
+    if(!val && window.storage){
+      const res = await window.storage.get(STORAGE_KEY, false);
+      val = res && res.value ? res.value : null;
+    }
+    state = val ? JSON.parse(val) : defaultState();
+  }catch(e){ state = defaultState(); }
+  state.subjects.forEach((s, i) => { if(!s.color) s.color = COLORS[i % COLORS.length]; });
+  await restoreSessionFilesFromDB();
+  render();
+}
+
+async function saveState(){
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    if(window.storage) await window.storage.set(STORAGE_KEY, JSON.stringify(state), false);
+  }catch(e){ console.error("تعذّر الحفظ", e); }
+}
+
+function subjectLabel(i){
+  const names = ["الأولى","الثانية","الثالثة","الرابعة"];
+  return `مادة ${names[i] || i+1}`;
+}
+function escapeHtml(s){ return String(s || "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function escapeAttr(s){ return escapeHtml(s || ""); }
+function uid(){ return Math.random().toString(36).slice(2,10); }
+
+/* ---------------- Rendering ---------------- */
+function render(){
+  renderBreadcrumb();
+  if(currentPath.length === 0) renderRoot();
+  else renderSubject(currentPath[0]);
+}
+
+function renderBreadcrumb(){
+  const bc = document.getElementById("breadcrumb");
+  if(currentPath.length === 0){
+    bc.innerHTML = `<span class="crumb-accent">الترم الحالي</span><span>›</span><span>${SUBJECT_COUNT} مواد</span>`;
+    return;
+  }
+  const subject = state.subjects[currentPath[0]];
+  bc.innerHTML = `<span class="crumb-link" id="crumb-root">الترم الحالي</span><span>›</span><span class="crumb-accent">${escapeHtml(subject.name || subjectLabel(subject.id))}</span>`;
+  document.getElementById("crumb-root").addEventListener("click", () => { currentPath = []; render(); });
+}
+
+function renderRoot(){
+  const wrap = document.getElementById("view-root");
+
+  const layout = document.createElement("div");
+  layout.className = "dashboard-layout";
+
+  // ── Q&W Maker special card (matches screenshot look) — placed first so it sits beside the grid ──
+  const qwWrap = document.createElement("div");
+  qwWrap.className = "qw-card-wrap";
+  const qwCard = document.createElement("div");
+  qwCard.className = "qw-card";
+  qwCard.innerHTML = `
+    <img class="qw-hero-img" src="Tracker.jpeg" alt="Q&W Sheet Maker">
+    <div class="qw-card-body">
+      <div class="qw-card-title">صانع الملفات Q&amp;W</div>
+      <div class="qw-card-sub">ارفع ملف الأسئلة + ملف الإجابات<br>ينتج شيت مدمج جاهز للطباعة</div>
+      <div class="qw-card-badge">✨ Gemini AI · مجاناً</div>
+      <div class="qw-progress-bar"><div class="qw-progress-fill"></div></div>
+    </div>
+  `;
+  qwCard.addEventListener("click", openQWMaker);
+  qwWrap.appendChild(qwCard);
+  layout.appendChild(qwWrap);
+
+  const grid = document.createElement("div");
+  grid.className = "grid-view subjects-grid";
+
+  state.subjects.forEach(subject => {
+    const pct = Math.round((subject.files.length / MAX_FILES) * 100);
+    const card = document.createElement("div");
+    card.className = "folder-card";
+    card.style.setProperty("--card-color", subject.color);
+
+    card.innerHTML = `
+      <div class="folder-top-row">
+        <button type="button" class="folder-icon-btn" data-role="icon-btn">${subject.icon}</button>
+        <button type="button" class="color-dot-btn" data-role="color-btn" title="لون المادة"></button>
+      </div>
+      <input class="folder-name" type="text" placeholder="اسم ${subjectLabel(subject.id)}" value="${escapeAttr(subject.name)}">
+      <div class="folder-count">${subject.files.length} / ${MAX_FILES}</div>
+      <div class="folder-progress"><div class="folder-progress-fill" style="width:${pct}%"></div></div>
+    `;
+
+    const iconBtn = card.querySelector('[data-role="icon-btn"]');
+    iconBtn.addEventListener("click", (e) => { e.stopPropagation(); openIconPicker(iconBtn, subject); });
+
+    const colorBtn = card.querySelector('[data-role="color-btn"]');
+    colorBtn.addEventListener("click", (e) => { e.stopPropagation(); openColorPicker(colorBtn, subject); });
+
+    const nameInput = card.querySelector(".folder-name");
+    nameInput.addEventListener("click", (e) => e.stopPropagation());
+    nameInput.addEventListener("input", (e) => { subject.name = e.target.value; saveState(); });
+
+    card.addEventListener("click", (e) => {
+      if(e.target === iconBtn || e.target === nameInput || e.target === colorBtn) return;
+      currentPath = [subject.id];
+      render();
+    });
+
+    grid.appendChild(card);
+  });
+
+  layout.appendChild(grid);
+
+  wrap.innerHTML = "";
+  wrap.style.removeProperty("--card-color");
+  wrap.appendChild(layout);
+}
+
+function renderSubject(subjectId){
+  const subject = state.subjects[subjectId];
+  const wrap = document.getElementById("view-root");
+
+  const titleRow = document.createElement("div");
+  titleRow.className = "subject-title-row";
+  titleRow.innerHTML = `
+    <span class="st-icon">${subject.icon}</span>
+    <h2>${escapeHtml(subject.name || subjectLabel(subject.id))}</h2>
+    <span class="st-count">${subject.files.length} / ${MAX_FILES}</span>
+    <button type="button" class="color-dot-btn" data-role="color-btn" style="position:static; box-shadow:0 0 0 1px var(--border);" title="لون المادة"></button>
+  `;
+  const colorBtn2 = titleRow.querySelector('[data-role="color-btn"]');
+  colorBtn2.addEventListener("click", (e) => { e.stopPropagation(); openColorPicker(colorBtn2, subject); });
+
+  const grid = document.createElement("div");
+  grid.className = "files-grid";
+
+  subject.files.forEach((f, idx) => {
+    grid.appendChild(buildFilledBox(subject, f, idx));
+  });
+
+  if(subject.files.length < MAX_FILES){
+    grid.appendChild(buildEmptyBox(subject));
+  } else {
+    const note = document.createElement("div");
+    note.className = "limit-note";
+    note.textContent = `وصلت للحد الأقصى (${MAX_FILES} ملف) لهذه المادة.`;
+    grid.appendChild(note);
+  }
+
+  wrap.innerHTML = "";
+  wrap.style.setProperty("--card-color", subject.color);
+  wrap.appendChild(titleRow);
+
+  // ── Bank Stats Bar ──────────────────────────
+  if(EXAM_FEATURES_ENABLED){
+    const statsBar = document.createElement("div");
+    statsBar.className = "bank-stats";
+    statsBar.id = `bank-stats-${subject.id}`;
+    statsBar.innerHTML = buildBankStatsHTML(bankCache[subject.id]);
+    wrap.appendChild(statsBar);
+    fetchBankInfo(subject.id);
+  }
+
+  wrap.appendChild(grid);
+
+  // ── Exam Generate Button ────────────────────
+  if(EXAM_FEATURES_ENABLED){
+    const examRow = document.createElement("div");
+    examRow.style.cssText = "display:flex;justify-content:center;gap:10px;margin-top:28px;flex-wrap:wrap;";
+    
+    const examBtn = document.createElement("button");
+    examBtn.type = "button";
+    examBtn.className = "exam-btn";
+    examBtn.id = `exam-btn-${subject.id}`;
+    examBtn.innerHTML = "🎓 إنشاء امتحان جديد";
+    examBtn.addEventListener("click", () => openExamSelectModal(subject));
+    examRow.appendChild(examBtn);
+
+    const historyBtn = document.createElement("button");
+    historyBtn.type = "button";
+    historyBtn.className = "exam-btn secondary";
+    historyBtn.innerHTML = "📚 امتحاناتي السابقة";
+    historyBtn.addEventListener("click", () => toggleExamHistory(subject));
+    examRow.appendChild(historyBtn);
+
+    wrap.appendChild(examRow);
+
+    const historyList = document.createElement("div");
+    historyList.className = "exam-history-list";
+    historyList.id = `exam-history-${subject.id}`;
+    historyList.style.display = "none";
+    wrap.appendChild(historyList);
+  }
+}
+
+/* ---------------- Bank stats ---------------- */
+function buildBankStatsHTML(cached){
+  if(!cached){
+    return `<div class="bank-stat"><span class="dot warn"></span><span>جارٍ تحميل إحصائيات البنك...</span></div>`;
+  }
+  const lectureCount = cached.lecture_count || 0;
+  const qCount = cached.total_questions || 0;
+  const dotClass = qCount >= 10 ? "ok" : qCount > 0 ? "warn" : "dot";
+  return `
+    <div class="bs-group">
+      <div class="bank-stat"><span class="dot ${dotClass}"></span><strong>${lectureCount}</strong><span>محاضرة في البنك</span></div>
+      <div class="bank-stat"><strong>${qCount}</strong><span>سؤال متاح</span></div>
+    </div>
+    <div class="bank-stat" style="font-size:11px;color:var(--text-secondary)">
+      ${qCount >= 10 ? '✅ جاهز لإنشاء امتحان' : qCount > 0 ? '⚠️ يفضّل رفع محاضرات أكثر' : '📂 ارفع محاضرات أولاً'}
+    </div>
+  `;
+}
+
+async function fetchBankInfo(subjectId){
+  try{
+    const res = await fetch(`${N8N_BANK_INFO_URL}?subject_id=${encodeURIComponent(subjectId)}`);
+    if(!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    bankCache[subjectId] = data;
+    const bar = document.getElementById(`bank-stats-${subjectId}`);
+    if(bar) bar.innerHTML = buildBankStatsHTML(data);
+  }catch(e){
+    const bar = document.getElementById(`bank-stats-${subjectId}`);
+    if(bar) bar.style.display = "none";
+  }
+}
+
+/* ---------------- Exam history ---------------- */
+async function toggleExamHistory(subject){
+  const list = document.getElementById(`exam-history-${subject.id}`);
+  if(!list) return;
+
+  const isOpen = list.style.display !== "none";
+  if(isOpen){
+    list.style.display = "none";
+    return;
+  }
+
+  list.style.display = "flex";
+  list.innerHTML = `<div class="exam-history-empty">⏳ جارٍ تحميل الامتحانات السابقة...</div>`;
+
+  try{
+    const res = await fetch(`${N8N_EXAM_HISTORY_URL}?subject_id=${encodeURIComponent(subject.id)}`);
+    if(!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    const items = Array.isArray(data) ? data : (data.items || []);
+    examHistoryCache[subject.id] = items;
+    list.innerHTML = buildExamHistoryListHTML(subject, items);
+
+    list.querySelectorAll("[data-exam-index]").forEach(el => {
+      el.addEventListener("click", () => {
+        const idx = Number(el.getAttribute("data-exam-index"));
+        openHistoricalExam(subject, examHistoryCache[subject.id][idx]);
+      });
+    });
+  }catch(e){
+    list.innerHTML = `<div class="exam-history-error">⚠️ تعذّر جلب الامتحانات السابقة من السيرفر.</div>`;
+  }
+}
+
+function buildExamHistoryListHTML(subject, items){
+  if(!items || items.length === 0){
+    return `<div class="exam-history-empty">مفيش امتحانات سابقة لسه لـ"${escapeHtml(subject.name || subjectLabel(subject.id))}".</div>`;
+  }
+  return items.map((entry, idx) => {
+    const dateLabel = entry.created_at
+      ? new Date(entry.created_at).toLocaleDateString("ar-EG", { year:"numeric", month:"long", day:"numeric" })
+      : "—";
+    return `
+      <div class="exam-history-item" data-exam-index="${idx}">
+        <span class="eh-date">📅 ${dateLabel}</span>
+        <span class="eh-open">فتح الامتحان ⤢</span>
+      </div>
+    `;
+  }).join("");
+}
+
+function openHistoricalExam(subject, entry){
+  if(!entry || !entry.questions_html){
+    showToast("⚠️ الامتحان ده مالوش محتوى محفوظ", "error");
+    return;
+  }
+  const subjectName = subject.name || subjectLabel(subject.id);
+  openExamModal(subject);
+  const htmlContent = buildExamDocument(subjectName, entry.questions_html, entry.answers_html);
+  displayExamInModal(
+    { html_content: htmlContent, exam_number: entry.id || "—", questions_count: 10 },
+    subjectName,
+    true
+  );
+}
+
+function buildFilledBox(subject, fileObj, idx){
+  const box = document.createElement("div");
+  box.className = "file-box filled";
+  const lectureIndex = idx + 1;
+  box.innerHTML = `
+    <span class="lec-tag">${lectureIndex}</span>
+    <button type="button" class="remove-x" title="حذف">×</button>
+    <div class="pdf-icon">PDF</div>
+    <div class="fname" title="${escapeAttr(fileObj.name)}">${escapeHtml(fileObj.name)}</div>
+  `;
+  box.querySelector(".remove-x").addEventListener("click", async (e) => {
+    e.stopPropagation();
+    const key = `${subject.id}-${fileObj.id}`;
+    if(sessionFiles[key]){
+      URL.revokeObjectURL(sessionFiles[key].url);
+      delete sessionFiles[key];
+    }
+    await deletePdfFromDB(key);
+
+    // Delete questions from backend database for this lecture
+    try {
+      fetch(N8N_DELETE_LECTURE_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ subject_id: subject.id, lecture_number: lectureIndex })
+      }).catch(err => console.warn(err));
+    } catch(e){}
+
+    subject.files = subject.files.filter(f => f.id !== fileObj.id);
+    saveState();
+    delete bankCache[subject.id];
+    render();
+    showToast(`🗑️ تم حذف المحاضرة ${lectureIndex} وتحديث بنك الأسئلة`, "success");
+  });
+  box.addEventListener("click", () => openPreview(subject, fileObj));
+  return box;
+}
+
+function buildEmptyBox(subject){
+  const box = document.createElement("div");
+  box.className = "file-box empty";
+  box.innerHTML = `<span class="plus-circle">+</span><span class="empty-label">إضافة ملف</span>`;
+
+  const fileInput = document.createElement("input");
+  fileInput.type = "file";
+  fileInput.accept = "application/pdf";
+  fileInput.addEventListener("change", async () => {
+    if(fileInput.files && fileInput.files[0] && subject.files.length < MAX_FILES){
+      const file = fileInput.files[0];
+      const id = uid();
+      const lectureIndex = subject.files.length + 1;
+      const key = `${subject.id}-${id}`;
+      
+      subject.files.push({ id, name: file.name, uploadedAt: new Date().toISOString() });
+      sessionFiles[key] = { file, url: URL.createObjectURL(file), name: file.name };
+      
+      // Save permanently in browser IndexedDB
+      await savePdfToDB(key, file, file.name);
+      saveState();
+      render();
+
+      // Auto-extract questions via Backend
+      if(EXAM_FEATURES_ENABLED){
+        extractPdfQuestions(subject, file, id, lectureIndex);
+      }
+    }
+  });
+
+  box.appendChild(fileInput);
+  box.addEventListener("click", () => fileInput.click());
+  return box;
+}
+
+/* ════════════════════════════════════════════
+   EXAM SYSTEM FUNCTIONS
+════════════════════════════════════════════ */
+
+async function extractPdfQuestions(subject, file, fileId, lectureIndex){
+  const subjectName = subject.name || subjectLabel(subject.id);
+  showToast(`⏳ جارٍ استخراج الأسئلة من "${file.name}"...`);
+
+  const formData = new FormData();
+  formData.append("subject_id", String(subject.id));
+  formData.append("subject_name", subjectName);
+  formData.append("lecture_number", String(lectureIndex));
+  formData.append("file", file, file.name);
+
+  try{
+    const res = await fetch(N8N_EXTRACT_URL, {
+      method:"POST",
+      body: formData,
+    });
+    if(!res.ok) throw new Error(`HTTP ${res.status}`);
+    showToast(`✅ محاضرة ${lectureIndex} اتفحصت واتضافت لبنك الأسئلة`, "success");
+    delete bankCache[subject.id];
+    if(document.getElementById(`bank-stats-${subject.id}`)) fetchBankInfo(subject.id);
+  }catch(e){
+    showToast("⚠️ تعذّر استخراج الأسئلة من السيرفر — تأكد من عمل السيرفر", "error");
+  }
+}
+
+/* ─── Exam Selection Modal (شامل vs مخصص) ───────────────────────── */
+function openExamSelectModal(subject){
+  currentExamSubject = subject;
+  if(subject.files.length === 0){
+    showToast("⚠️ يرجى رفع ملفات محاضرات أولاً قبل إنشاء الامتحان", "error");
+    return;
+  }
+
+  const overlay = document.getElementById("exam-select-overlay");
+  const title = document.getElementById("select-modal-title");
+  title.textContent = `🎓 إنشاء امتحان — ${subject.name || subjectLabel(subject.id)}`;
+
+  const radioAll = document.querySelector('input[name="exam-type"][value="all"]');
+  const radioCustom = document.querySelector('input[name="exam-type"][value="custom"]');
+  radioAll.checked = true;
+
+  const chkContainer = document.getElementById("lecture-checkboxes-container");
+  chkContainer.style.display = "none";
+  chkContainer.innerHTML = "";
+
+  subject.files.forEach((f, idx) => {
+    const lecNum = idx + 1;
+    const item = document.createElement("label");
+    item.style.cssText = "display:flex; align-items:center; gap:8px; font-size:13px; color:var(--text-main); cursor:pointer;";
+    item.innerHTML = `
+      <input type="checkbox" name="selected_lec" value="${lecNum}" checked>
+      <span><strong>محاضرة ${lecNum}:</strong> ${escapeHtml(f.name)}</span>
+    `;
+    chkContainer.appendChild(item);
+  });
+
+  const optAllLabel = document.getElementById("opt-all-label");
+  const optCustomLabel = document.getElementById("opt-custom-label");
+
+  function updateRadioUI(){
+    if(radioAll.checked){
+      optAllLabel.style.borderColor = "var(--accent)";
+      optAllLabel.style.background = "var(--accent-pale)";
+      optCustomLabel.style.borderColor = "var(--border)";
+      optCustomLabel.style.background = "#fff";
+      chkContainer.style.display = "none";
+    } else {
+      optCustomLabel.style.borderColor = "var(--accent)";
+      optCustomLabel.style.background = "var(--accent-pale)";
+      optAllLabel.style.borderColor = "var(--border)";
+      optAllLabel.style.background = "#fff";
+      chkContainer.style.display = "flex";
+    }
+  }
+
+  radioAll.onchange = updateRadioUI;
+  radioCustom.onchange = updateRadioUI;
+  updateRadioUI();
+
+  overlay.classList.add("open");
+}
+
+document.getElementById("exam-select-close").addEventListener("click", () => {
+  document.getElementById("exam-select-overlay").classList.remove("open");
+});
+
+document.getElementById("start-exam-gen-btn").addEventListener("click", () => {
+  document.getElementById("exam-select-overlay").classList.remove("open");
+  if(!currentExamSubject) return;
+
+  const isAll = document.querySelector('input[name="exam-type"][value="all"]').checked;
+  let selectedLecs = null;
+  if(!isAll){
+    const checkedBoxes = Array.from(document.querySelectorAll('input[name="selected_lec"]:checked'));
+    if(checkedBoxes.length === 0){
+      showToast("⚠️ يرجى تحديد محاضرة واحدة على الأقل", "error");
+      return;
+    }
+    selectedLecs = checkedBoxes.map(b => Number(b.value));
+  }
+
+  generateExam(currentExamSubject, selectedLecs);
+});
+
+async function generateExam(subject, selectedLectures=null){
+  const btn = document.getElementById(`exam-btn-${subject.id}`);
+  if(btn) btn.disabled = true;
+
+  openExamModal(subject);
+  const subjectName = subject.name || subjectLabel(subject.id);
+
+  const steps = ["lstep-1","lstep-2","lstep-3","lstep-4"];
+  let stepIdx = 0;
+  const stepTimer = setInterval(() => {
+    if(stepIdx > 0){
+      const prev = document.getElementById(steps[stepIdx-1]);
+      if(prev){ prev.classList.remove("active"); prev.classList.add("done"); }
+    }
+    if(stepIdx < steps.length){
+      const cur = document.getElementById(steps[stepIdx]);
+      if(cur) cur.classList.add("active");
+    }
+    stepIdx++;
+    if(stepIdx > steps.length) clearInterval(stepTimer);
+  }, 18000 / steps.length);
+
+  try{
+    const reqBody = {
+      subject_id: subject.id,
+      subject_name: subjectName,
+      lecture_count: subject.files.length,
+      question_count: 10,
+    };
+    if(selectedLectures && selectedLectures.length > 0){
+      reqBody.selected_lectures = selectedLectures;
+    }
+
+    const res = await fetch(N8N_GENERATE_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(reqBody),
+    });
+    clearInterval(stepTimer);
+    if(!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+
+    if(data.questions_html){
+      delete examHistoryCache[subject.id];
+      delete bankCache[subject.id];
+      const htmlContent = buildExamDocument(subjectName, data.questions_html, data.answers_html);
+      displayExamInModal(
+        { html_content: htmlContent, exam_number: Date.now(), questions_count: 10 },
+        subjectName
+      );
+    } else {
+      closeExamModal();
+      showToast("❌ فشل إنشاء الامتحان — الرد غير مكتمل", "error");
+    }
+  }catch(e){
+    clearInterval(stepTimer);
+    closeExamModal();
+    showToast("⚠️ تعذّر إنشاء الامتحان — تأكد من عمل السيرفر", "error");
+  } finally {
+    if(btn) btn.disabled = false;
+  }
+}
+
+/* ─── Build Exam HTML Document with Minimalist Navy Border & Clean Layout ─── */
+function buildExamDocument(subjectName, questionsHtml, answersHtml){
+  const title = escapeHtml(subjectName);
+  return `<!DOCTYPE html>
+<html lang="ar">
+<head>
+<meta charset="UTF-8">
+<title>امتحان ${title}</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<!-- KaTeX -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"><\/script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"><\/script>
+<style>
+  @page { size: A4; margin: 10mm; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'IBM Plex Sans Arabic', -apple-system, sans-serif;
+    margin: 0; background: #e2e8f0; color: #0f172a; line-height: 1.6;
+  }
+  .toolbar {
+    position: sticky; top: 0; background: #ffffff; border-bottom: 1px solid #cbd5e1;
+    padding: 10px 20px; display: flex; justify-content: center; gap: 12px; z-index: 50;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+  }
+  .toolbar button {
+    background: #1e3a8a; color: #fff; border: none; border-radius: 6px;
+    padding: 8px 18px; font-family: inherit; font-weight: 600; font-size: 13.5px;
+    cursor: pointer; transition: 0.15s;
+  }
+  .toolbar button:hover { background: #172554; }
+  .toolbar button.secondary { background: #f8fafc; color: #1e293b; border: 1px solid #cbd5e1; }
+  .toolbar button.secondary:hover { background: #e2e8f0; }
+
+  /* A4 Page with clean thin navy border */
+  .page {
+    width: 210mm; min-height: 297mm; margin: 20px auto; background: #ffffff;
+    padding: 14mm 16mm; box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    border: 1.5px solid #1e3a8a; /* بوردر كحلي خفيف ونظيف */
+    position: relative; display: flex; flex-direction: column;
+  }
+
+  .exam-header {
+    border-bottom: 1.5px solid #1e3a8a; padding-bottom: 10px; margin-bottom: 16px;
+  }
+  .exam-header-top {
+    display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;
+  }
+  .exam-title {
+    font-family: 'Cairo', sans-serif; font-size: 19px; font-weight: 700; color: #1e3a8a; margin: 0;
+  }
+  .exam-info {
+    font-size: 12.5px; color: #475569; display: flex; gap: 18px;
+  }
+  .student-bar {
+    display: flex; justify-content: space-between; font-size: 12.5px; color: #334155;
+    padding-top: 6px; border-top: 1px dashed #cbd5e1;
+  }
+
+  /* Questions & Answers Content */
+  .exam-content { direction: ltr; text-align: left; flex: 1; }
+  .exam-content ol { padding-left: 20px; margin: 0; }
+  .exam-content li {
+    margin-bottom: 14px; font-size: 14px; line-height: 1.65; color: #0f172a;
+    padding-bottom: 10px; border-bottom: 1px solid #f1f5f9;
+  }
+  .exam-content li:last-child { border-bottom: none; }
+  .exam-content p { margin: 4px 0; }
+
+  /* KaTeX formula fine-tuning */
+  .katex { font-size: 1.05em; }
+  .katex-display { margin: 8px 0 !important; }
+
+  #answers-page { display: none; }
+
+  @media print {
+    body { background: #fff; }
+    .toolbar { display: none !important; }
+    .page {
+      box-shadow: none !important; margin: 0 !important; width: 100% !important;
+      min-height: auto !important; padding: 12mm 14mm !important;
+      border: 1.5px solid #1e3a8a !important; page-break-after: always;
+    }
+    #answers-page { display: flex !important; }
+  }
+</style>
+</head>
+<body>
+  <div class="toolbar">
+    <button id="toggle-answers-btn" type="button">إظهار نموذج الإجابة</button>
+    <button class="secondary" type="button" onclick="window.print()">🖨️ طباعة الامتحان (صفحتين A4)</button>
+  </div>
+
+  <!-- Page 1: Questions -->
+  <div class="page" id="questions-page">
+    <div class="exam-header">
+      <div class="exam-header-top">
+        <h1 class="exam-title">امتحان: ${title}</h1>
+        <div class="exam-info">
+          <span>الزمن: ساعتان</span>
+          <span>الدرجة: 100</span>
+        </div>
+      </div>
+      <div class="student-bar">
+        <span>اسم الطالب: ................................................................</span>
+        <span>رقم الجلوس: ....................</span>
+      </div>
+    </div>
+    <div class="exam-content">
+      ${questionsHtml || "<p>لا توجد أسئلة متاحة.</p>"}
+    </div>
+  </div>
+
+  <!-- Page 2: Model Answers -->
+  <div class="page" id="answers-page">
+    <div class="exam-header">
+      <div class="exam-header-top">
+        <h1 class="exam-title" style="color: #0f766e;">نموذج الإجابة: ${title}</h1>
+        <div class="exam-info">
+          <span>Model Answers Sheet</span>
+        </div>
+      </div>
+      <div class="student-bar" style="border-top-color: #99f6e4;">
+        <span>الحلول النموذجية والخطوات التفصيلية</span>
+        <span>Total Marks: 100</span>
+      </div>
+    </div>
+    <div class="exam-content">
+      ${answersHtml || "<p>لا توجد إجابات متاحة.</p>"}
+    </div>
+  </div>
+
+  <script>
+    function renderMath() {
+      if (window.renderMathInElement) {
+        renderMathInElement(document.body, {
+          delimiters: [
+            {left: "$$", right: "$$", display: true},
+            {left: "$", right: "$", display: false},
+            {left: "\\\\[", right: "\\\\]", display: true},
+            {left: "\\\\(", right: "\\\\)", display: false}
+          ],
+          throwOnError: false
+        });
+      }
+    }
+    document.addEventListener("DOMContentLoaded", renderMath);
+    window.addEventListener("load", renderMath);
+    setTimeout(renderMath, 400);
+
+    const btn = document.getElementById("toggle-answers-btn");
+    const ansPage = document.getElementById("answers-page");
+    let shown = false;
+    btn.addEventListener("click", () => {
+      shown = !shown;
+      ansPage.style.display = shown ? "flex" : "none";
+      btn.textContent = shown ? "إخفاء نموذج الإجابة" : "إظهار نموذج الإجابة";
+    });
+  <\/script>
+</body>
+</html>`;
+}
+
+function openExamModal(subject){
+  const overlay = document.getElementById("exam-overlay");
+  const title = document.getElementById("exam-modal-title");
+  const body = document.getElementById("exam-modal-body");
+  const openTab = document.getElementById("exam-open-tab");
+  const printBtn = document.getElementById("exam-print-btn");
+
+  title.textContent = `🎓 إنشاء امتحان — ${subject.name || subjectLabel(subject.id)}`;
+  openTab.style.display = "none";
+  printBtn.style.display = "none";
+
+  ["lstep-1","lstep-2","lstep-3","lstep-4"].forEach(id => {
+    const el = document.getElementById(id);
+    if(el){ el.classList.remove("active","done"); }
+  });
+
+  body.innerHTML = document.getElementById("exam-loading").parentNode
+    ? document.getElementById("exam-loading").outerHTML
+    : `<div class="exam-loading"><div class="loader-ring"></div><div class="loader-title">جارٍ الإنشاء...</div></div>`;
+
+  overlay.classList.add("open");
+}
+
+function displayExamInModal(data, subjectName, isReopen){
+  const body = document.getElementById("exam-modal-body");
+  const openTab = document.getElementById("exam-open-tab");
+  const printBtn = document.getElementById("exam-print-btn");
+  const title = document.getElementById("exam-modal-title");
+
+  title.textContent = `🎓 امتحان ${subjectName} — رقم #${data.exam_number} (${data.questions_count} سؤال)`;
+
+  const blob = new Blob([data.html_content], { type:"text/html;charset=utf-8" });
+  const blobUrl = URL.createObjectURL(blob);
+
+  body.innerHTML = `<iframe id="exam-frame" src="${blobUrl}" title="امتحان ${escapeAttr(subjectName)}"></iframe>`;
+
+  openTab.href = blobUrl;
+  openTab.style.display = "inline-flex";
+  printBtn.style.display = "inline-flex";
+
+  showToast(
+    isReopen ? "📂 اتفتح الامتحان السابق" : `✅ تم إنشاء الامتحان بنجاح — ${data.questions_count} أسئلة`,
+    "success"
+  );
+}
+
+function closeExamModal(){
+  document.getElementById("exam-overlay").classList.remove("open");
+  document.getElementById("exam-modal-body").innerHTML = "";
+}
+
+/* Toast notification */
+let toastTimer = null;
+function showToast(msg, type=""){
+  const existing = document.getElementById("extract-toast");
+  if(existing) existing.remove();
+  if(toastTimer) clearTimeout(toastTimer);
+
+  const toast = document.createElement("div");
+  toast.className = `extract-toast ${type}`;
+  toast.id = "extract-toast";
+  toast.textContent = msg;
+  document.body.appendChild(toast);
+
+  toastTimer = setTimeout(() => toast.remove(), 5000);
+}
+
+/* ---------------- Icon picker ---------------- */
+function openIconPicker(anchorEl, subject){
+  const pop = document.getElementById("icon-popover");
+  pop.innerHTML = "";
+  ICONS.forEach(ic => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.textContent = ic;
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      subject.icon = ic;
+      saveState();
+      closeIconPicker();
+      render();
+    });
+    pop.appendChild(btn);
+  });
+  const rect = anchorEl.getBoundingClientRect();
+  pop.style.top = `${window.scrollY + rect.bottom + 6}px`;
+  pop.style.left = `${window.scrollX + rect.left - 80}px`;
+  pop.classList.add("open");
+
+  setTimeout(() => document.addEventListener("click", closeIconPickerOnOutside), 0);
+}
+function closeIconPicker(){
+  document.getElementById("icon-popover").classList.remove("open");
+  document.removeEventListener("click", closeIconPickerOnOutside);
+}
+function closeIconPickerOnOutside(e){
+  const pop = document.getElementById("icon-popover");
+  if(!pop.contains(e.target)) closeIconPicker();
+}
+
+/* ---------------- Color picker ---------------- */
+function openColorPicker(anchorEl, subject){
+  const pop = document.getElementById("color-popover");
+  pop.innerHTML = "";
+  COLORS.forEach(c => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.style.background = c;
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      subject.color = c;
+      saveState();
+      closeColorPicker();
+      render();
+    });
+    pop.appendChild(btn);
+  });
+  const rect = anchorEl.getBoundingClientRect();
+  pop.style.top = `${window.scrollY + rect.bottom + 6}px`;
+  pop.style.left = `${window.scrollX + rect.left - 60}px`;
+  pop.classList.add("open");
+
+  setTimeout(() => document.addEventListener("click", closeColorPickerOnOutside), 0);
+}
+function closeColorPicker(){
+  document.getElementById("color-popover").classList.remove("open");
+  document.removeEventListener("click", closeColorPickerOnOutside);
+}
+function closeColorPickerOnOutside(e){
+  const pop = document.getElementById("color-popover");
+  if(!pop.contains(e.target)) closeColorPicker();
+}
+
+/* ---------------- Preview modal ---------------- */
+async function openPreview(subject, fileObj){
+  const overlay = document.getElementById("modal-overlay");
+  const body = document.getElementById("modal-body");
+  const title = document.getElementById("modal-title");
+  const openTab = document.getElementById("modal-open-tab");
+
+  title.textContent = fileObj.name;
+  const key = `${subject.id}-${fileObj.id}`;
+  let sess = sessionFiles[key];
+
+  if(!sess || !sess.url){
+    const blob = await getPdfFromDB(key);
+    if(blob){
+      sess = { file: blob, url: URL.createObjectURL(blob), name: fileObj.name };
+      sessionFiles[key] = sess;
+    }
+  }
+
+  if(sess && sess.url){
+    body.innerHTML = `<iframe src="${sess.url}#toolbar=1&scrollbar=1" title="${escapeAttr(fileObj.name)}"></iframe>`;
+    openTab.href = sess.url;
+    openTab.style.display = "inline-flex";
+  } else {
+    body.innerHTML = `
+      <div class="modal-empty">
+        <span class="big">📄</span>
+        <p>معاينة "${escapeHtml(fileObj.name)}" غير متاحة.</p>
+      </div>`;
+    openTab.style.display = "none";
+  }
+  overlay.classList.add("open");
+}
+document.getElementById("modal-close").addEventListener("click", () => {
+  document.getElementById("modal-overlay").classList.remove("open");
+  document.getElementById("modal-body").innerHTML = "";
+});
+document.getElementById("modal-overlay").addEventListener("click", (e) => {
+  if(e.target.id === "modal-overlay"){
+    document.getElementById("modal-overlay").classList.remove("open");
+    document.getElementById("modal-body").innerHTML = "";
+  }
+});
+document.getElementById("cta-start").addEventListener("click", () => {
+  document.getElementById("view-root").scrollIntoView({ behavior: "smooth", block: "start" });
+});
+
+/* Exam modal close */
+document.getElementById("exam-modal-close").addEventListener("click", closeExamModal);
+document.getElementById("exam-overlay").addEventListener("click", (e) => {
+  if(e.target.id === "exam-overlay") closeExamModal();
+});
+
+document.getElementById("tb-date").textContent = new Date().toLocaleDateString("en-GB", { year:"numeric", month:"long", day:"numeric" });
+
+loadState();
+
+/* ════════════════════════════════════════════════════════════
+   Q&W SHEET MAKER — Fully isolated from Exam system
+════════════════════════════════════════════════════════════ */
+const QW_MERGE_URL   = "https://term-web.onrender.com/webhook/merge-qa-sheet";
+const QW_HISTORY_URL = "https://term-web.onrender.com/webhook/qa-sheets";
+
+let qwFileQ = null; // questions file
+let qwFileA = null; // answers file
+let qwCurrentBlobUrl = null;
+
+function openQWMaker(){
+  document.getElementById("qw-overlay").classList.add("open");
+  loadQWHistory();
+}
+
+function closeQWMaker(){
+  document.getElementById("qw-overlay").classList.remove("open");
+}
+
+// ── Drop-zone wiring ──
+function wireDropZone(dzId, inputId, fileVar, fnameId, onFile){
+  const dz    = document.getElementById(dzId);
+  const inp   = document.getElementById(inputId);
+  const fname = document.getElementById(fnameId);
+
+  dz.addEventListener("click", () => inp.click());
+
+  dz.addEventListener("dragover", e => { e.preventDefault(); dz.classList.add("drag-over"); });
+  dz.addEventListener("dragleave", () => dz.classList.remove("drag-over"));
+  dz.addEventListener("drop", e => {
+    e.preventDefault();
+    dz.classList.remove("drag-over");
+    const f = e.dataTransfer.files[0];
+    if(f) onFile(f);
+  });
+
+  inp.addEventListener("change", () => {
+    if(inp.files[0]) onFile(inp.files[0]);
+  });
+}
+
+function setQWFile(which, file){
+  const dzId    = which === "q" ? "qw-dz-q" : "qw-dz-a";
+  const fnameId = which === "q" ? "qw-fname-q" : "qw-fname-a";
+  const dz    = document.getElementById(dzId);
+  const fname = document.getElementById(fnameId);
+
+  if(which === "q") qwFileQ = file;
+  else              qwFileA = file;
+
+  dz.classList.add("has-file");
+  fname.textContent = file.name;
+  fname.style.display = "block";
+
+  // Enable generate button when at least questions file is chosen
+  document.getElementById("qw-generate-btn").disabled = !qwFileQ;
+}
+
+// ── Generate sheet ──
+async function generateQWSheet(){
+  if(!qwFileQ){
+    showToast("⚠️ يرجى رفع ملف الأسئلة على الأقل", "error");
+    return;
+  }
+
+  const btn   = document.getElementById("qw-generate-btn");
+  const icon  = document.getElementById("qw-gen-icon");
+  const label = document.getElementById("qw-gen-label");
+  btn.disabled  = true;
+  icon.textContent  = "⏳";
+  label.textContent = "جارٍ التوليد…";
+
+  // Show loading state in preview
+  const panel = document.getElementById("qw-preview-panel");
+  panel.innerHTML = `
+    <div class="qw-preview-loading">
+      <div class="qw-ring"></div>
+      <div class="qw-loading-title">جارٍ قراءة الملفات وتوليد الشيت…</div>
+      <div style="font-size:13px;color:#6b7280;max-width:30ch;line-height:1.7;">الذكاء الاصطناعي يقرأ ملفَيك ويطابق كل سؤال بإجابته الكاملة</div>
+      <div class="qw-loading-steps">
+        <div class="qw-step active" id="qws-1"><span>📖</span> قراءة ملف الأسئلة</div>
+        <div class="qw-step" id="qws-2"><span>🖊</span> تحليل خط اليد والإجابات</div>
+        <div class="qw-step" id="qws-3"><span>🔣</span> توليد معادلات LaTeX</div>
+        <div class="qw-step" id="qws-4"><span>🖨</span> بناء الشيت جاهزاً للطباعة</div>
+      </div>
+    </div>`;
+
+  // Animate loading steps
+  const stepIds = ["qws-1","qws-2","qws-3","qws-4"];
+  let si = 0;
+  const stepTimer = setInterval(() => {
+    if(si > 0) document.getElementById(stepIds[si-1]).className = "qw-step done";
+    if(si < stepIds.length){
+      document.getElementById(stepIds[si]).className = "qw-step active";
+      si++;
+    } else {
+      clearInterval(stepTimer);
+    }
+  }, 2200);
+
+  try{
+    const fd = new FormData();
+    fd.append("questions_file", qwFileQ, qwFileQ.name);
+    if(qwFileA) fd.append("answers_file", qwFileA, qwFileA.name);
+
+    const res = await fetch(QW_MERGE_URL, { method:"POST", body:fd });
+    clearInterval(stepTimer);
+    if(!res.ok) throw new Error(`HTTP ${res.status}`);
+
+    const data = await res.json();
+    if(data.error) throw new Error(data.error);
+
+    renderQWSheet(data.sheet);
+    loadQWHistory();
+    showToast("✅ تم توليد الشيت بنجاح!", "success");
+  }catch(err){
+    clearInterval(stepTimer);
+    panel.innerHTML = `
+      <div class="qw-preview-empty">
+        <div class="pe-icon">⚠️</div>
+        <p style="color:#ef4444;">حدث خطأ أثناء التوليد:<br>${escapeHtml(String(err))}</p>
+      </div>`;
+    showToast("⚠️ فشل توليد الشيت — تحقق من اتصال السيرفر", "error");
+  }finally{
+    btn.disabled  = false;
+    icon.textContent  = "✨";
+    label.textContent = "توليد الشيت Q&W";
+  }
+}
+
+// ── Build and show the A4 HTML sheet inside iframe ──
+function renderQWSheet(sheet){
+  const html = buildQWHtml(sheet);
+  if(qwCurrentBlobUrl) URL.revokeObjectURL(qwCurrentBlobUrl);
+  const blob = new Blob([html], {type:"text/html"});
+  qwCurrentBlobUrl = URL.createObjectURL(blob);
+
+  const panel = document.getElementById("qw-preview-panel");
+  panel.innerHTML = `<iframe id="qw-frame" class="qw-preview-iframe" src="${qwCurrentBlobUrl}"></iframe>`;
+
+  document.getElementById("qw-print-btn").style.display = "inline-flex";
+  const openBtn = document.getElementById("qw-open-tab");
+  openBtn.style.display = "inline-flex";
+  openBtn.onclick = () => window.open(qwCurrentBlobUrl, "_blank");
+}
+
+function buildQWHtml(sheet){
+  const title   = escapeHtml(sheet.course_title  || "Tutorial Sheet");
+  const subtitle = escapeHtml(sheet.course_sub || "");
+  const problems = sheet.problems || [];
+
+  const problemsHtml = problems.map((p, idx) => `
+    <div class="problem" id="p${idx+1}">
+      <div class="prob-label">${escapeHtml(p.problem_label || `Problem ${idx+1}`)}</div>
+      <div class="question">${p.question_html || ""}</div>
+      <div class="answer-label">✦ Model Answer</div>
+      <div class="answer-body">${p.answer_html || ""}</div>
+    </div>
+  `).join("");
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>${title}</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"><\/script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"><\/script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
+  @page{ size:A4; margin:0; }
+  :root{ --ink:#111827; --accent:#1d4ed8; --accent-pale:#eff6ff; --line:#e5e7eb; }
+  *{ box-sizing:border-box; }
+  body{
+    margin:0; background:#e9ecef; color:var(--ink);
+    font-family:'IBM Plex Sans',sans-serif; font-size:12.5px; line-height:1.6;
+  }
+  .a4-page{
+    width:210mm; min-height:297mm; margin:8mm auto; background:#fff;
+    padding:14mm; box-shadow:0 2mm 8mm rgba(0,0,0,0.18);
+    page-break-after:always;
+  }
+  @media print{
+    body{ background:#fff; }
+    .a4-page{ margin:0; box-shadow:none; }
+  }
+  header.doc-header{
+    display:grid; grid-template-columns:1fr auto 1fr;
+    align-items:center; border-bottom:3px solid var(--accent);
+    padding-bottom:10px; margin-bottom:20px;
+  }
+  .title-block{ text-align:center; }
+  .title-block h1{
+    font-family:'Poppins',sans-serif; font-size:20px; font-weight:800;
+    color:var(--accent); margin:0 0 4px;
+  }
+  .title-block .sub{ font-size:11px; color:#6b7280; }
+  .doc-logo{
+    height:52px; width:auto; max-width:120px; object-fit:contain; justify-self:start; display:block;
+  }
+  .doc-logo.right{ justify-self:end; }
+  .problem{
+    border-top:1px solid var(--line); padding-top:14px; margin-bottom:20px;
+    break-inside:avoid; page-break-inside:avoid;
+  }
+  .problem:first-of-type{ border-top:none; }
+  .prob-label{
+    display:inline-block; background:var(--accent); color:#fff;
+    font-family:'Poppins',sans-serif; font-weight:700; font-size:12px;
+    padding:3px 14px; border-radius:3px; margin-bottom:10px;
+  }
+  .question{
+    background:var(--accent-pale); border-right:3px solid var(--accent);
+    padding:9px 13px; margin-bottom:10px; font-size:13px; font-weight:600;
+    border-radius:4px;
+  }
+  .answer-label{
+    font-weight:700; font-size:11px; letter-spacing:.6px; text-transform:uppercase;
+    color:var(--accent); margin-bottom:6px;
+  }
+  .answer-body{ font-size:12.5px; }
+  .katex-display{ margin:8px 0; }
+  .boxed, .katex .boxed{ border:2px solid var(--accent); border-radius:4px; padding:6px 12px; background:var(--accent-pale); display:inline-block; margin:6px 0; }
+  .row-flex{ display:flex; align-items:center; gap:16px; flex-wrap:wrap; margin:8px 0; }
+  .row-flex .eqs{ flex:1; min-width:200px; }
+  svg text{ font-family:'IBM Plex Sans',sans-serif; }
+  .page-footer{
+    text-align:center; font-size:10px; color:#9ca3af;
+    border-top:1px solid var(--line); padding-top:8px; margin-top:12px;
+  }
+<\/style>
+</head>
+<body>
+<div class="a4-page">
+  <header class="doc-header">
+    <img class="doc-logo" src="data:image/jpeg;base64,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PqMF/pbata3kDbo5Y71gyn8v0ra8W/DLSPF0EEHiG+1e8ggbekZutqhsYzhQMmu6oo5UN1Zt3uec+Ffg/wCHfCl+174fuNXsrh02OUuyQ65zgggg0eK/g/4c8Wagt74guNWvLhV2IXuyAi5zgADAr0aijlQe0ne99TivBHw30fwUXXw/c6nBBI4kkge53xuwGMkEenpSePvhj4b8d3drda9bztcW6GNJIJjGSpOcHHXmu2oostg55X5r6nKeCPAum+C7Y2uiXOoiyJZvs01x5kYY9SARkfnUE3w60OPXZNb0dZ9G1WRSsk9g+wSZ/voQVbnnpXZUUWQueV73ON1vwJD4kt0tvFOqX+pWauH+yqVgicj++EALfia6XR9KsNF0+Kx0q0htLSIYSKJQoH+fWrtFFhOTasFFFFMQUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAjAMCCAQeCDXivxT+Auj+J/O1Dw75elas3zFVXEEp91H3T7j8q9ropSipaM0pVZ0nzQZ+c/i3wprPhLU2sNesZbWYfdJGUkHqrdCKw6/R7xN4c0nxPpkmn65ZRXds/wDC45U+qnqD7ivmjxn+zZqkWsxHwpdxT6bPJhhctte2HqT/ABAe3Nc06TWx7NDHwqK09GfPUaNI6pGpZ2OAqjJJr3b4V/s/alrnk6h4tMmm6ccMtsOJ5R7/ANwfXmvbvhf8HNA8DpHcvGNR1gD5ruZeEP8AsL/D9etenVUKPWRhiMx+zS+8yvDfh7SvDWmR2GiWUNpbIPuxrgsfVj1J9zWrRRXQlY8ptyd2FFFFAgooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKAP//Z" alt="MAY University in Cairo">
+    <div class="title-block">
+      <h1>${title}</h1>
+      <div class="sub">${subtitle}</div>
+    </div>
+    <img class="doc-logo right" src="data:image/jpeg;base64,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3/Y/w29dJ/8AAk//ABVH9j/Db10n/wACT/8AFV4JRWP9jT/5/wAvvNv7Xh/z5j9x73/Y/wANvXSf/Ak//FV5H47h0y38U3seh+T/AGeNnl+U25fuDOD9c1gUV1YTL5YafO6jlpszmxeOjiIcipqPoFFFW9K0671a9jtNOgee4foiD9Sew9zXoykormk7I4IxcnaK1LfhXRZfEGvWmnQg4lbMjD+BB94/l+pFfVEESQQxxRKFjRQqgdgOBXJfDrwbF4V09mlKy6lOB50o6KP7i+w/Wuwr4TN8esXVtD4Y7f5n22U4F4SlefxS3CiiivJPWCiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACszX9D0/X7I2up26zR/wnoyH1U9Qa06KqMpQfNF2ZMoxmuWSuj538cfDvUPDxe6sw97po58xR88Y/2wO3uP0rhq+wSARgjIrzTxz8MLXVPMvNC2Wl6cloekUp/9lP6V9Rl+fbU8T9/+Z8zj8jtephvu/wAjwmirep6dd6XeSWmoW8lvcJ1Rxj8R6j3FVK+njJSXNF3R83KLi7NahRRRTJCip7GzuL+6jtrKGSe4kOFjQZJr2bwN8LIbPy73xGEuLgfMtqOY0/3v7x9un1rixmYUcHG9R69up24TA1cXK1Nad+hwfgnwDqXiV0ncG003PNw68v7IO/16V7x4a8Oab4cs/s+mW4TP35G5eQ+rH/IrXRVRQqAKoGAAMAClr4vHZnWxjtLSPb+tz7HBZbSwiutZdwooorzj0AooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigDH8TeG9N8R2f2fU4A5H3JV4eM+qn+nSvCPGfw/1Tw7I0sSNe6f1E8S5Kj/bUdPr0r6Por0cDmdbBu0dY9mefjcto4tXlpLufHuRnGRmus8H+BtV8Syq6Rta2OfmuZVIBH+yP4j+lfRh06yL7zaW5bOc+Uuf5VaAAGAMCvTrcRzlG1KFn3vc8yjw9CMr1J3XbYwfCnhXTPDNr5enw5mYfvJ35kf6nsPYcVvUUV89UqSqSc5u7Z9BTpxpxUYKyQUUUVBYUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFAH/2Q==" alt="Faculty of Engineering">
+  </header>
+  ${problemsHtml}
+  <div class="page-footer">Generated by TermBoard Q&amp;W Maker · Powered by Gemini AI</div>
+</div>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  renderMathInElement(document.body, {
+    delimiters:[
+      {left:"\\\\(",right:"\\\\)",display:false},
+      {left:"\\\\[",right:"\\\\]",display:true},
+      {left:"$$",right:"$$",display:true},
+      {left:"$",right:"$",display:false}
+    ],
+    throwOnError:false
+  });
+});
+<\/script>
+</body></html>`;
+}
+
+// ── Load Sheets History ──
+async function loadQWHistory(){
+  const list = document.getElementById("qw-history-list");
+  try{
+    const res  = await fetch(QW_HISTORY_URL);
+    const rows = await res.json();
+    if(!Array.isArray(rows) || rows.length === 0){
+      list.innerHTML = `<div style="font-size:12px;color:#94a3b8;text-align:center;padding:8px;">لا توجد شيتات محفوظة بعد</div>`;
+      return;
+    }
+    list.innerHTML = rows.map((r, i) => {
+      const d = r.created_at ? new Date(r.created_at).toLocaleDateString("ar-EG",{year:"numeric",month:"short",day:"numeric"}) : "—";
+      return `<div class="qw-history-item" data-idx="${i}">
+        <div class="qh-title">${escapeHtml(r.title)}</div>
+        <div class="qh-sub">${escapeHtml(r.subtitle || "")} · ${d}</div>
+      </div>`;
+    }).join("");
+    // click to re-render
+    rows.forEach((r,i) => {
+      list.querySelectorAll(".qw-history-item")[i].addEventListener("click", () => {
+        try{ renderQWSheet(typeof r.sheet_data === "string" ? JSON.parse(r.sheet_data) : r.sheet_data); }
+        catch(e){ showToast("تعذّر تحميل الشيت","error"); }
+      });
+    });
+  }catch(e){
+    list.innerHTML = `<div style="font-size:12px;color:#ef4444;text-align:center;padding:8px;">تعذّر تحميل السجل</div>`;
+  }
+}
+
+// ── Wire up events ──
+wireDropZone("qw-dz-q", "qw-input-q", "q", "qw-fname-q", f => setQWFile("q", f));
+wireDropZone("qw-dz-a", "qw-input-a", "a", "qw-fname-a", f => setQWFile("a", f));
+document.getElementById("qw-generate-btn").addEventListener("click", generateQWSheet);
+document.getElementById("qw-close").addEventListener("click", closeQWMaker);
+document.getElementById("qw-overlay").addEventListener("click", e => {
+  if(e.target.id === "qw-overlay") closeQWMaker();
+});
+
+</script>
+
+</body>
+</html>

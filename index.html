@@ -1235,8 +1235,10 @@ function buildFilledBox(subject, fileObj, idx){
   const box = document.createElement("div");
   box.className = "file-box filled";
   const lectureIndex = idx + 1;
+  const pendingBadge = fileObj.file_url ? "" : `<span class="lec-tag" style="left:auto; right:6px; background:#f59e0b;" title="الملف الأصلي لسه بيترفع/فشل رفعه — الأسئلة محفوظة بالفعل">⏳</span>`;
   box.innerHTML = `
     <span class="lec-tag">${lectureIndex}</span>
+    ${pendingBadge}
     <button type="button" class="remove-x" title="حذف">×</button>
     <div class="pdf-icon">PDF</div>
     <div class="fname" title="${escapeAttr(fileObj.name)}">${escapeHtml(fileObj.name)}</div>

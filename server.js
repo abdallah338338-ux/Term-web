@@ -68,6 +68,7 @@ async function uploadFileToStorage(buffer, mimeType, subjectId, lectureNumber, o
         method: "POST",
         headers: {
           Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`,
+          apikey: SUPABASE_SERVICE_KEY, // مطلوب مع مفاتيح sb_secret_... الجديدة، مش بديل عن Authorization
           "Content-Type": mimeType || "application/pdf",
           "x-upsert": "true",
         },
@@ -95,6 +96,7 @@ async function deleteFilesFromStorage(paths) {
       method: "DELETE",
       headers: {
         Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`,
+        apikey: SUPABASE_SERVICE_KEY, // نفس السبب: لازم جنب Authorization مش بديل عنه
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ prefixes: paths }),
@@ -149,6 +151,15 @@ async function ensureTables() {
     );
   `);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_lecture_files_subject ON lecture_files(subject_id, lecture_number);`);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS subjects (
+      subject_id TEXT PRIMARY KEY,
+      name TEXT,
+      icon TEXT,
+      color TEXT,
+      updated_at TIMESTAMPTZ DEFAULT now()
+    );
+  `);
   console.log("✓ tables ready");
 }
 
@@ -211,19 +222,33 @@ app.post("/webhook/extract-questions", upload.single("file"), async (req, res) =
       Number(lecture_number),
       req.file.originalname || "lecture.pdf"
     );
-    if (uploaded) {
-      await pool.query(
-        `DELETE FROM lecture_files WHERE subject_id = $1 AND lecture_number = $2`,
-        [subject_id, Number(lecture_number)]
-      );
-      await pool.query(
-        `INSERT INTO lecture_files (subject_id, lecture_number, file_name, file_path, file_url)
-         VALUES ($1, $2, $3, $4, $5)`,
-        [subject_id, Number(lecture_number), req.file.originalname || "lecture.pdf", uploaded.path, uploaded.url]
+
+    // مهم: نسجّل صف lecture_files دايمًا (نجح رفع Storage أو لأ) عشان الصندوق
+    // يفضل ظاهر على كل الأجهزة بعد أي Refresh. لو الرفع فشل، بنسجّل مكانه
+    // فاضي؛ المعاينة من جهاز تاني هتتفعّل تلقائيًا أول ما الرفع ينجح تاني
+    // (مثلاً بعد تصحيح إعدادات Storage) من غير ما تضطر تمسح الصندوق وتعيده.
+    await pool.query(
+      `DELETE FROM lecture_files WHERE subject_id = $1 AND lecture_number = $2`,
+      [subject_id, Number(lecture_number)]
+    );
+    await pool.query(
+      `INSERT INTO lecture_files (subject_id, lecture_number, file_name, file_path, file_url)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [
+        subject_id,
+        Number(lecture_number),
+        req.file.originalname || "lecture.pdf",
+        uploaded ? uploaded.path : "",
+        uploaded ? uploaded.url : "",
+      ]
+    );
+    if (!uploaded) {
+      console.warn(
+        `⚠ Storage upload failed for subject=${subject_id} lecture=${lecture_number} — questions saved, but original file preview won't work on other devices until this is retried.`
       );
     }
 
-    res.json({ status: "ok", questions_extracted: questions.length, file_url: uploaded ? uploaded.url : null });
+    res.json({ status: "ok", questions_extracted: questions.length, file_url: uploaded ? uploaded.url : null, storage_ok: !!uploaded });
   } catch (err) {
     console.error(err);
     res.status(500).json({ status: "error", message: String(err) });
@@ -484,6 +509,37 @@ app.get("/webhook/qa-sheets", async (req, res) => {
       `SELECT id, title, subtitle, sheet_data, created_at FROM qa_sheets ORDER BY created_at DESC LIMIT 50`
     );
     res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: String(err) });
+  }
+});
+
+// ── 9) بيانات المواد (اسم/أيقونة/لون) — متزامنة بين كل الأجهزة ──────
+app.get("/webhook/subjects", async (req, res) => {
+  try {
+    const { rows } = await pool.query(`SELECT subject_id, name, icon, color FROM subjects`);
+    res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: String(err) });
+  }
+});
+
+app.post("/webhook/subjects", async (req, res) => {
+  try {
+    const { subject_id, name, icon, color } = req.body;
+    if (subject_id === undefined || subject_id === null) {
+      return res.status(400).json({ error: "subject_id required" });
+    }
+    await pool.query(
+      `INSERT INTO subjects (subject_id, name, icon, color, updated_at)
+       VALUES ($1, $2, $3, $4, now())
+       ON CONFLICT (subject_id) DO UPDATE
+       SET name = EXCLUDED.name, icon = EXCLUDED.icon, color = EXCLUDED.color, updated_at = now()`,
+      [String(subject_id), name || "", icon || "", color || ""]
+    );
+    res.json({ status: "ok" });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: String(err) });

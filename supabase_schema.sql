@@ -48,3 +48,13 @@ CREATE TABLE IF NOT EXISTS lecture_files (
 );
 
 CREATE INDEX IF NOT EXISTS idx_lecture_files_subject ON lecture_files(subject_id, lecture_number);
+
+-- 4. جدول بيانات المواد (subjects) — الاسم/الأيقونة/اللون متزامنين
+-- بين كل الأجهزة (بدل ما يتخزنوا محليًا بس في كل متصفح)
+CREATE TABLE IF NOT EXISTS subjects (
+    subject_id TEXT PRIMARY KEY,
+    name TEXT,
+    icon TEXT,
+    color TEXT,
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);

@@ -776,6 +776,7 @@ const N8N_BANK_INFO_URL      = "https://term-web.onrender.com/webhook/bank-info"
 const N8N_EXAM_HISTORY_URL   = "https://term-web.onrender.com/webhook/exam-history";
 const N8N_DELETE_LECTURE_URL = "https://term-web.onrender.com/webhook/delete-lecture";
 const N8N_LECTURE_FILES_URL  = "https://term-web.onrender.com/webhook/lecture-files";
+const N8N_SUBJECTS_URL       = "https://term-web.onrender.com/webhook/subjects";
 const EXAM_FEATURES_ENABLED  = true;
 
 let state = null;
@@ -881,6 +882,65 @@ async function loadState(){
   state.subjects.forEach((s, i) => { if(!s.color) s.color = COLORS[i % COLORS.length]; });
   await restoreSessionFilesFromDB();
   render();
+
+  // مزامنة حقيقية مع السيرفر — تجيب آخر نسخة من بيانات المواد والملفات
+  // من أي جهاز تاني اتعمل منه تعديل، وتحدّث الشاشة تلقائي لما توصل.
+  await syncAllFromServer();
+}
+
+async function syncAllFromServer(){
+  if(!EXAM_FEATURES_ENABLED) return;
+  try{
+    const res = await fetch(N8N_SUBJECTS_URL);
+    if(res.ok){
+      const rows = await res.json();
+      rows.forEach(row => {
+        const subject = state.subjects[Number(row.subject_id)];
+        if(!subject) return;
+        if(row.name) subject.name = row.name;
+        if(row.icon) subject.icon = row.icon;
+        if(row.color) subject.color = row.color;
+      });
+    }
+  }catch(e){ console.warn("subjects sync failed:", e); }
+
+  await Promise.all(state.subjects.map(s => fetchLectureFilesForSubject(s.id)));
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  render();
+}
+
+let subjectSyncTimers = {};
+function syncSubjectToServer(subject){
+  if(!EXAM_FEATURES_ENABLED) return;
+  clearTimeout(subjectSyncTimers[subject.id]);
+  subjectSyncTimers[subject.id] = setTimeout(() => {
+    fetch(N8N_SUBJECTS_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ subject_id: subject.id, name: subject.name, icon: subject.icon, color: subject.color }),
+    }).catch(err => console.warn("subject sync failed:", err));
+  }, 500);
+}
+
+async function fetchLectureFilesForSubject(subjectId){
+  try{
+    const res = await fetch(`${N8N_LECTURE_FILES_URL}?subject_id=${encodeURIComponent(subjectId)}`);
+    if(!res.ok) throw new Error(`HTTP ${res.status}`);
+    const rows = await res.json();
+    lectureFilesCache[subjectId] = rows;
+
+    const subject = state.subjects[subjectId];
+    if(subject){
+      // السيرفر هو المصدر الحقيقي: نعيد بناء قائمة الملفات من رده
+      subject.files = rows
+        .sort((a,b) => a.lecture_number - b.lecture_number)
+        .map(r => ({ id: `srv-${r.lecture_number}`, name: r.file_name, file_url: r.file_url }));
+    }
+    return rows;
+  }catch(e){
+    console.warn("lecture-files fetch failed:", e);
+    return lectureFilesCache[subjectId] || null;
+  }
 }
 
 async function saveState(){
@@ -967,7 +1027,7 @@ function renderRoot(){
 
     const nameInput = card.querySelector(".folder-name");
     nameInput.addEventListener("click", (e) => e.stopPropagation());
-    nameInput.addEventListener("input", (e) => { subject.name = e.target.value; saveState(); });
+    nameInput.addEventListener("input", (e) => { subject.name = e.target.value; saveState(); syncSubjectToServer(subject); });
 
     card.addEventListener("click", (e) => {
       if(e.target === iconBtn || e.target === nameInput || e.target === colorBtn) return;
@@ -1031,6 +1091,17 @@ function renderSubject(subjectId){
   }
 
   wrap.appendChild(grid);
+
+  // حدّث قائمة الملفات من السيرفر كل مرة تدخل المادة (يلتقط أي رفع
+  // حصل من جهاز تاني) وأعد الرسم لو فيه فرق فقط (يمنع حلقة تحديث لا نهائية)
+  const beforeSignature = JSON.stringify(subject.files.map(f => f.id));
+  fetchLectureFilesForSubject(subject.id).then(() => {
+    const afterSignature = JSON.stringify(subject.files.map(f => f.id));
+    if(currentPath[0] === subject.id && afterSignature !== beforeSignature){
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      render();
+    }
+  });
 
   // ── Exam Generate Button ────────────────────
   if(EXAM_FEATURES_ENABLED){
@@ -1258,6 +1329,9 @@ async function extractPdfQuestions(subject, file, fileId, lectureIndex){
     delete bankCache[subject.id];
     delete lectureFilesCache[subject.id];
     if(document.getElementById(`bank-stats-${subject.id}`)) fetchBankInfo(subject.id);
+    await fetchLectureFilesForSubject(subject.id);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    if(currentPath[0] === subject.id) render();
   }catch(e){
     showToast("⚠️ تعذّر استخراج الأسئلة من السيرفر — تأكد من عمل السيرفر", "error");
   }
@@ -1647,6 +1721,7 @@ function openIconPicker(anchorEl, subject){
       e.stopPropagation();
       subject.icon = ic;
       saveState();
+      syncSubjectToServer(subject);
       closeIconPicker();
       render();
     });
@@ -1680,6 +1755,7 @@ function openColorPicker(anchorEl, subject){
       e.stopPropagation();
       subject.color = c;
       saveState();
+      syncSubjectToServer(subject);
       closeColorPicker();
       render();
     });
@@ -1726,6 +1802,16 @@ async function openPreview(subject, fileObj, lectureIndex){
   const openTab = document.getElementById("modal-open-tab");
 
   title.textContent = fileObj.name;
+
+  // لو عندنا رابط حقيقي من السيرفر بالفعل (اتزامن)، استخدمه فورًا
+  if(fileObj.file_url){
+    body.innerHTML = `<iframe src="${fileObj.file_url}#toolbar=1&scrollbar=1" title="${escapeAttr(fileObj.name)}"></iframe>`;
+    openTab.href = fileObj.file_url;
+    openTab.style.display = "inline-flex";
+    overlay.classList.add("open");
+    return;
+  }
+
   const key = `${subject.id}-${fileObj.id}`;
   let sess = sessionFiles[key];
 

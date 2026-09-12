@@ -44,6 +44,66 @@ const pool = new Pool({
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent`;
 
+// ── Supabase Storage (رفع الملفات الحقيقية عشان تفضل متاحة من أي جهاز) ──
+const SUPABASE_URL = process.env.SUPABASE_URL;          // مثال: https://xxxx.supabase.co
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY; // service_role key
+const STORAGE_BUCKET = "lecture-files";
+
+function sanitizeFileName(name) {
+  return String(name).replace(/[^a-zA-Z0-9_.\-\u0600-\u06FF]/g, "_");
+}
+
+// بيرفع الملف لـSupabase Storage ويرجّع رابطه العام. لو الإعدادات ناقصة
+// أو الرفع فشل، بيرجّع null من غير ما يوقف باقي العملية (الاستخراج أهم).
+async function uploadFileToStorage(buffer, mimeType, subjectId, lectureNumber, originalName) {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
+    console.warn("Supabase Storage env vars missing — skipping file upload");
+    return null;
+  }
+  try {
+    const path = `${subjectId}/${lectureNumber}-${Date.now()}-${sanitizeFileName(originalName)}`;
+    const uploadRes = await fetch(
+      `${SUPABASE_URL}/storage/v1/object/${STORAGE_BUCKET}/${path}`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`,
+          "Content-Type": mimeType || "application/pdf",
+          "x-upsert": "true",
+        },
+        body: buffer,
+      }
+    );
+    if (!uploadRes.ok) {
+      console.warn("Storage upload failed:", uploadRes.status, await uploadRes.text());
+      return null;
+    }
+    return {
+      path,
+      url: `${SUPABASE_URL}/storage/v1/object/public/${STORAGE_BUCKET}/${path}`,
+    };
+  } catch (e) {
+    console.warn("Storage upload error:", e);
+    return null;
+  }
+}
+
+async function deleteFilesFromStorage(paths) {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY || paths.length === 0) return;
+  try {
+    await fetch(`${SUPABASE_URL}/storage/v1/object/${STORAGE_BUCKET}`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ prefixes: paths }),
+    });
+  } catch (e) {
+    console.warn("Storage delete error:", e);
+  }
+}
+
 // ── جداول قاعدة البيانات (تتعمل أول مرة تلقائيًا) ───────────────────
 async function ensureTables() {
   await pool.query(`
@@ -77,6 +137,18 @@ async function ensureTables() {
       created_at TIMESTAMPTZ DEFAULT now()
     );
   `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS lecture_files (
+      id SERIAL PRIMARY KEY,
+      subject_id TEXT NOT NULL,
+      lecture_number INT NOT NULL,
+      file_name TEXT NOT NULL,
+      file_path TEXT NOT NULL,
+      file_url TEXT NOT NULL,
+      uploaded_at TIMESTAMPTZ DEFAULT now()
+    );
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_lecture_files_subject ON lecture_files(subject_id, lecture_number);`);
   console.log("✓ tables ready");
 }
 
@@ -130,7 +202,28 @@ app.post("/webhook/extract-questions", upload.single("file"), async (req, res) =
       );
     }
 
-    res.json({ status: "ok", questions_extracted: questions.length });
+    // ارفع الملف الأصلي لـSupabase Storage عشان يفضل متاح من أي جهاز
+    // (لو فشل الرفع، الاستخراج لسه نجح — مبنوقفش العملية بسببه)
+    const uploaded = await uploadFileToStorage(
+      req.file.buffer,
+      mimeType,
+      subject_id,
+      Number(lecture_number),
+      req.file.originalname || "lecture.pdf"
+    );
+    if (uploaded) {
+      await pool.query(
+        `DELETE FROM lecture_files WHERE subject_id = $1 AND lecture_number = $2`,
+        [subject_id, Number(lecture_number)]
+      );
+      await pool.query(
+        `INSERT INTO lecture_files (subject_id, lecture_number, file_name, file_path, file_url)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [subject_id, Number(lecture_number), req.file.originalname || "lecture.pdf", uploaded.path, uploaded.url]
+      );
+    }
+
+    res.json({ status: "ok", questions_extracted: questions.length, file_url: uploaded ? uploaded.url : null });
   } catch (err) {
     console.error(err);
     res.status(500).json({ status: "error", message: String(err) });
@@ -204,7 +297,36 @@ app.post("/webhook/delete-lecture", async (req, res) => {
       `DELETE FROM question_bank WHERE subject_id = $1 AND lecture_number = $2`,
       [String(subject_id), Number(lecture_number)]
     );
+
+    const { rows } = await pool.query(
+      `SELECT file_path FROM lecture_files WHERE subject_id = $1 AND lecture_number = $2`,
+      [String(subject_id), Number(lecture_number)]
+    );
+    if (rows.length > 0) {
+      await deleteFilesFromStorage(rows.map((r) => r.file_path));
+      await pool.query(
+        `DELETE FROM lecture_files WHERE subject_id = $1 AND lecture_number = $2`,
+        [String(subject_id), Number(lecture_number)]
+      );
+    }
+
     res.json({ status: "ok" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: String(err) });
+  }
+});
+
+// ── 8) روابط الملفات المرفوعة (لعرض/فتح الملف الأصلي من أي جهاز) ────
+app.get("/webhook/lecture-files", async (req, res) => {
+  try {
+    const subjectId = String(req.query.subject_id);
+    const { rows } = await pool.query(
+      `SELECT lecture_number, file_name, file_url FROM lecture_files
+       WHERE subject_id = $1 ORDER BY lecture_number ASC`,
+      [subjectId]
+    );
+    res.json(rows);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: String(err) });

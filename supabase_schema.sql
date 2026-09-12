@@ -33,3 +33,18 @@ CREATE TABLE IF NOT EXISTS exam_history (
 
 -- فهرس لترتيب واسترجاع الامتحانات السابقة بسرعة
 CREATE INDEX IF NOT EXISTS idx_exam_history_subject ON exam_history(subject_id, created_at DESC);
+
+-- 3. جدول الملفات المرفوعة الحقيقية (lecture_files)
+-- بيربط كل محاضرة برابط ملف الـPDF الأصلي المحفوظ في Supabase Storage
+-- (bucket اسمه lecture-files، لازم تعمله يدوي من Storage → New bucket → Public)
+CREATE TABLE IF NOT EXISTS lecture_files (
+    id BIGSERIAL PRIMARY KEY,
+    subject_id TEXT NOT NULL,
+    lecture_number INT NOT NULL,
+    file_name TEXT NOT NULL,
+    file_path TEXT NOT NULL,
+    file_url TEXT NOT NULL,
+    uploaded_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_lecture_files_subject ON lecture_files(subject_id, lecture_number);

@@ -2,8 +2,11 @@
 <html lang="en" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>TermBoard | لوحة تجهيز الترم</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%233E7BFA'/%3E%3Cstop offset='1' stop-color='%232557D6'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='100' height='100' rx='22' fill='url(%23g)'/%3E%3Ctext x='50' y='66' font-size='52' text-anchor='middle' font-family='Poppins,Arial,sans-serif'%3E%F0%9F%97%93%EF%B8%8F%3C/text%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%233E7BFA'/%3E%3Cstop offset='1' stop-color='%232557D6'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='100' height='100' rx='22' fill='url(%23g)'/%3E%3Ctext x='50' y='66' font-size='52' text-anchor='middle' font-family='Poppins,Arial,sans-serif'%3E%F0%9F%97%93%EF%B8%8F%3C/text%3E%3C/svg%3E">
+<meta name="theme-color" content="#2557D6">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800;900&family=IBM+Plex+Sans+Arabic:wght@400;500;600&family=Poppins:wght@600;700;800;900&display=swap" rel="stylesheet">
@@ -281,6 +284,39 @@ Don’t show
     .qw-card-wrap{ width:100%; max-width:380px; }
     .subjects-grid{ grid-template-columns:repeat(2, minmax(140px,1fr)); width:100%; max-width:380px; }
     .modal-box{ height:92vh; }
+  }
+
+  /* ---------- Mobile fixes: overlays, Q&W maker, exam modal, file grid ---------- */
+  @media (max-width:700px){
+    .container{ padding:0 14px; }
+
+    /* Overlays take almost the full screen instead of leaving dead margins */
+    .modal-overlay, .exam-overlay, .qw-overlay{ padding:8px; }
+    .modal-box{ max-width:100%; border-radius:12px; }
+    .exam-modal, .qw-modal{ max-width:100%; height:94vh; border-radius:12px; }
+
+    /* Q&W maker: stack the upload panel above the preview instead of side-by-side —
+       the fixed 320px sidebar was squeezing the preview (the generated sheet) to nothing */
+    .qw-body{ flex-direction:column; overflow-y:auto; }
+    .qw-upload-panel{
+      width:100%; max-height:46vh; flex-shrink:0;
+      border-left:none; border-bottom:1px solid #e3e8f0;
+    }
+    .qw-preview-panel{ flex:1 1 auto; min-height:280px; }
+
+    /* Headers: allow wrapping instead of overflowing off-screen */
+    .qw-head, .exam-modal-head, .modal-head{ flex-wrap:wrap; padding:10px 12px; }
+    .qw-head-title, .exam-modal-title{ font-size:13.5px; }
+    .qw-btn, .em-btn, .mh-btn{ padding:6px 10px; font-size:11.5px; }
+
+    /* Subject file boxes: fit two per row instead of forcing a fixed min width */
+    .files-grid{ grid-template-columns:repeat(2, minmax(0,1fr)); gap:12px; }
+    .file-box{ min-height:170px; padding:14px 10px; }
+
+    /* Bank stats bar and exam history: allow wrapping so nothing gets clipped */
+    .bank-stats{ flex-wrap:wrap; gap:10px; padding:10px 14px; }
+    .bank-stats .bs-group{ flex-wrap:wrap; gap:10px; }
+    .exam-history-list{ max-width:100%; }
   }
 
   /* ─── Exam System ─────────────────────────── */
@@ -739,6 +775,7 @@ const N8N_GENERATE_URL       = "https://term-web.onrender.com/webhook/generate-e
 const N8N_BANK_INFO_URL      = "https://term-web.onrender.com/webhook/bank-info";
 const N8N_EXAM_HISTORY_URL   = "https://term-web.onrender.com/webhook/exam-history";
 const N8N_DELETE_LECTURE_URL = "https://term-web.onrender.com/webhook/delete-lecture";
+const N8N_LECTURE_FILES_URL  = "https://term-web.onrender.com/webhook/lecture-files";
 const EXAM_FEATURES_ENABLED  = true;
 
 let state = null;
@@ -1154,10 +1191,11 @@ function buildFilledBox(subject, fileObj, idx){
     subject.files = subject.files.filter(f => f.id !== fileObj.id);
     saveState();
     delete bankCache[subject.id];
+    delete lectureFilesCache[subject.id];
     render();
     showToast(`🗑️ تم حذف المحاضرة ${lectureIndex} وتحديث بنك الأسئلة`, "success");
   });
-  box.addEventListener("click", () => openPreview(subject, fileObj));
+  box.addEventListener("click", () => openPreview(subject, fileObj, lectureIndex));
   return box;
 }
 
@@ -1218,6 +1256,7 @@ async function extractPdfQuestions(subject, file, fileId, lectureIndex){
     if(!res.ok) throw new Error(`HTTP ${res.status}`);
     showToast(`✅ محاضرة ${lectureIndex} اتفحصت واتضافت لبنك الأسئلة`, "success");
     delete bankCache[subject.id];
+    delete lectureFilesCache[subject.id];
     if(document.getElementById(`bank-stats-${subject.id}`)) fetchBankInfo(subject.id);
   }catch(e){
     showToast("⚠️ تعذّر استخراج الأسئلة من السيرفر — تأكد من عمل السيرفر", "error");
@@ -1663,7 +1702,24 @@ function closeColorPickerOnOutside(e){
 }
 
 /* ---------------- Preview modal ---------------- */
-async function openPreview(subject, fileObj){
+const lectureFilesCache = {}; // subject_id → [{lecture_number, file_name, file_url}, ...]
+
+async function fetchLectureFileUrl(subjectId, lectureNumber){
+  try{
+    if(!lectureFilesCache[subjectId]){
+      const res = await fetch(`${N8N_LECTURE_FILES_URL}?subject_id=${encodeURIComponent(subjectId)}`);
+      if(!res.ok) throw new Error(`HTTP ${res.status}`);
+      lectureFilesCache[subjectId] = await res.json();
+    }
+    const entry = lectureFilesCache[subjectId].find(f => f.lecture_number === lectureNumber);
+    return entry ? entry.file_url : null;
+  }catch(e){
+    console.warn("lecture-files fetch failed:", e);
+    return null;
+  }
+}
+
+async function openPreview(subject, fileObj, lectureIndex){
   const overlay = document.getElementById("modal-overlay");
   const body = document.getElementById("modal-body");
   const title = document.getElementById("modal-title");
@@ -1685,6 +1741,19 @@ async function openPreview(subject, fileObj){
     body.innerHTML = `<iframe src="${sess.url}#toolbar=1&scrollbar=1" title="${escapeAttr(fileObj.name)}"></iframe>`;
     openTab.href = sess.url;
     openTab.style.display = "inline-flex";
+    overlay.classList.add("open");
+    return;
+  }
+
+  // مفيش نسخة محلية (زي لما تفتح من جهاز تاني) — جرّب رابط السيرفر الحقيقي
+  body.innerHTML = `<div class="modal-empty"><span class="big">⏳</span><p>جارٍ تحميل الملف من السيرفر...</p></div>`;
+  overlay.classList.add("open");
+
+  const remoteUrl = lectureIndex ? await fetchLectureFileUrl(subject.id, lectureIndex) : null;
+  if(remoteUrl){
+    body.innerHTML = `<iframe src="${remoteUrl}#toolbar=1&scrollbar=1" title="${escapeAttr(fileObj.name)}"></iframe>`;
+    openTab.href = remoteUrl;
+    openTab.style.display = "inline-flex";
   } else {
     body.innerHTML = `
       <div class="modal-empty">
@@ -1693,7 +1762,6 @@ async function openPreview(subject, fileObj){
       </div>`;
     openTab.style.display = "none";
   }
-  overlay.classList.add("open");
 }
 document.getElementById("modal-close").addEventListener("click", () => {
   document.getElementById("modal-overlay").classList.remove("open");

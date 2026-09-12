@@ -1,0 +1,14 @@
+{
+  "name": "TermBoard | لوحة تجهيز الترم",
+  "short_name": "TermBoard",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#2557D6",
+  "theme_color": "#3E7BFA"
+}

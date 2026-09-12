@@ -1326,7 +1326,11 @@ async function extractPdfQuestions(subject, file, fileId, lectureIndex){
       method:"POST",
       body: formData,
     });
-    if(!res.ok) throw new Error(`HTTP ${res.status}`);
+    if(!res.ok){
+      let detail = "";
+      try{ detail = (await res.json()).message || (await res.text()); }catch(_){ }
+      throw new Error(`HTTP ${res.status}${detail ? " — " + detail : ""}`);
+    }
     showToast(`✅ محاضرة ${lectureIndex} اتفحصت واتضافت لبنك الأسئلة`, "success");
     delete bankCache[subject.id];
     delete lectureFilesCache[subject.id];
@@ -1335,7 +1339,8 @@ async function extractPdfQuestions(subject, file, fileId, lectureIndex){
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     if(currentPath[0] === subject.id) render();
   }catch(e){
-    showToast("⚠️ تعذّر استخراج الأسئلة من السيرفر — تأكد من عمل السيرفر", "error");
+    console.error("extractPdfQuestions failed:", e);
+    showToast(`⚠️ فشل رفع/معالجة "${file.name}": ${String(e.message || e).slice(0,120)}`, "error");
   }
 }
 
